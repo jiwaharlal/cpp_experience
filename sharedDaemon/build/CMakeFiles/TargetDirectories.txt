@@ -1,0 +1,2 @@
+/home/mgbondarenko/projects/cpp_experience/sharedDaemon/build/CMakeFiles/calculator.dir
+/home/mgbondarenko/projects/cpp_experience/sharedDaemon/build/CMakeFiles/daemonLoader.dir

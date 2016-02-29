@@ -1,0 +1,1 @@
+/usr/bin/c++       CMakeFiles/daemonLoader.dir/app/daemonLoader.cpp.o  -o daemonLoader -rdynamic libcalculator.a -lboost_program_options -lrt 
