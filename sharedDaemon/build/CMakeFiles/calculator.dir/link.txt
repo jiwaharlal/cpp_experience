@@ -1,2 +1,0 @@
-/usr/bin/ar cr libcalculator.a  CMakeFiles/calculator.dir/lib/calculator.cpp.o
-/usr/bin/ranlib libcalculator.a
