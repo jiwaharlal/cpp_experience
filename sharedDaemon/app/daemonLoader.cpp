@@ -20,6 +20,7 @@
 #include <sstream>
 
 #include "../calculatorCommon/ICalculator.hpp"
+#include "DynamicLoader.hpp"
 
 //#define CALCULATOR_TEST_VERSION 42
 //#define CALCULATOR_REAL_VERSION 0
@@ -31,18 +32,14 @@ const char* SHM_NAME = "carPositionProvider2_shared_memory_object";
 const char* CALC_LIB_NAME = "libcalculator.so";
 
 boost::condition_variable executionCondition;
-ip::shared_memory_object shm;
-void* calculatorLib = NULL;
-tDestroyCalculatorFn destroyCalculator = NULL;
 bool isUseTestLib = false;
 
-bool tryCreateSharedID()
+bool saveProcessId(ip::shared_memory_object& shm)
 {
    try
    {
-      ip::shared_memory_object newShm(ip::create_only, SHM_NAME, ip::read_write);
-      newShm.truncate( sizeof(int));
-      ip::mapping_handle_t mappingHandle = newShm.get_mapping_handle();
+      shm.truncate( sizeof(int));
+      ip::mapping_handle_t mappingHandle = shm.get_mapping_handle();
       int* pId = reinterpret_cast<int*>(mmap(NULL, sizeof(int), PROT_WRITE, MAP_SHARED, mappingHandle.handle, 0));
       if ( pId == MAP_FAILED )
       {
@@ -55,7 +52,6 @@ bool tryCreateSharedID()
          std::cout << "Unmapping error" << std::endl;
          return false;
       }
-      newShm.swap(shm);
    } 
    catch(ip::interprocess_exception& e)
    {
@@ -195,81 +191,80 @@ void setupInteruptionHandler()
    sigaction(SIGINT, &sigIntHandler, NULL);
 }
 
-ICalculator* loadCalculator()
+std::string calculatorLibFullName()
 {
+   const char* libVersion = (isUseTestLib ? CALCULATOR_TEST_VERSION : CALCULATOR_REAL_VERSION);
    std::stringstream ss;
-   ss << (isUseTestLib ? CALCULATOR_TEST_VERSION : CALCULATOR_REAL_VERSION);
-   std::string libName = std::string(CALC_LIB_NAME) + "." + ss.str();
-   std::cout << "Loading library: " << libName << std::endl;
-   calculatorLib = dlopen((std::string("./lib/") + libName).c_str(), RTLD_NOW);
-   if (!calculatorLib)
-   {
-      std::cout << "Error. Could not load " << CALC_LIB_NAME << std::endl;
-      std::cout << dlerror() << std::endl;
-      return NULL;
-   }
+   ss << "./lib/" << CALC_LIB_NAME << "." << libVersion;
 
-   tCreateCalculatorFn createCalculator = reinterpret_cast<tCreateCalculatorFn>(dlsym(calculatorLib, "create"));
-   destroyCalculator = reinterpret_cast<tDestroyCalculatorFn>(dlsym(calculatorLib, "destroy"));
-
-   if (!createCalculator || !destroyCalculator)
-   {
-      std::cout << "Error. Could not load library functions from " << CALC_LIB_NAME << std::endl;
-      return NULL;
-   }
-
-   return createCalculator();
-}
-
-void unloadCalculator(ICalculator* c)
-{
-   if (destroyCalculator)
-   {
-      destroyCalculator(c);
-      std::cout << "Calculator removed" << std::endl;
-   }
-   if (calculatorLib)
-   {
-      dlclose(calculatorLib);
-      std::cout << "Library closed" << std::endl;
-   }
+   return ss.str();
 }
 
 void runCalculation()
 {
-   ICalculator* calc = loadCalculator();
-   if (!calc)
+   try
    {
-      std::cout << "Error loading Calculator lib" << std::endl;
-      return;
+      DynamicLoader<ICalculator> loader(calculatorLibFullName().c_str());
+      ICalculator* calc = loader.create();
+
+      boost::mutex executionMutex;
+      boost::unique_lock<boost::mutex> lock(executionMutex);
+
+      boost::random::mt19937 rng;
+      boost::random::uniform_int_distribution<> rndInt(-1000, 1000);
+
+      while (!isStop())
+      {
+         int v1 = rndInt(rng);
+         int v2 = rndInt(rng);
+         int result = calc->add(v1, v2);
+
+         std::cout << v1 << " + " << v2 << " = " << result << std::endl;
+
+         (void) result;
+
+         executionCondition.wait_for(lock, boost::chrono::milliseconds(1000), &isStop);
+      }
    }
-
-   boost::mutex executionMutex;
-   boost::unique_lock<boost::mutex> lock(executionMutex);
-
-   boost::random::mt19937 rng;
-   boost::random::uniform_int_distribution<> rndInt(-1000, 1000);
-
-   while (!isStop())
+   catch (const std::exception& e)
    {
-      int v1 = rndInt(rng);
-      int v2 = rndInt(rng);
-      int result = calc->add(v1, v2);
-
-      std::cout << v1 << " + " << v2 << " = " << result << std::endl;
-
-      (void) result;
-
-      executionCondition.wait_for(lock, boost::chrono::milliseconds(1000), &isStop);
+      std::cout << "Error loading calculator from library: " << e.what() << std::endl;
    }
-
-   unloadCalculator(calc);
+   catch (...)
+   {
+      std::cout << "Unknown error while loading library or running a calculation." << std::endl;
+   }
 }
 
 int main(int argc, char** argv)
 {
    po::variables_map vm;
    handleArguments(argc, argv, vm);
+
+   if (vm.count("stop")) // stop daemon
+   {
+      if ( tryStopService() )
+      {
+         std::cout << "Service stopped." << std::endl;
+         exit(EXIT_SUCCESS);
+      }
+
+      std::cout << "Could not stop service." << std::endl;
+      exit(EXIT_FAILURE);
+   }
+
+   boost::scoped_ptr<ip::shared_memory_object> shm;
+   try
+   {
+      shm.reset(new ip::shared_memory_object(ip::create_only, SHM_NAME, ip::read_write));
+   } 
+   catch(ip::interprocess_exception& e)
+   {
+      // executable is already running
+      std::cout << e.what() << std::endl;
+      std::cout << "Could not create ID, seems like the service is already running." << std::endl;
+      exit(EXIT_FAILURE);
+   }
 
    if (vm.count("daemon")) // run daemon 
    {
@@ -278,43 +273,20 @@ int main(int argc, char** argv)
          exit(EXIT_FAILURE);
       } 
    }
-   else if (vm.count("stop")) // stop daemon
-   {
-      if ( tryStopService() )
-      {
-         std::cout << "Service stopped." << std::endl;
-         exit(EXIT_SUCCESS);
-      }
-      else
-      {
-         std::cout << "Could not stop service." << std::endl;
-         exit(EXIT_FAILURE);
-      }
-   }
    else
    {
       std::cout << "Running in console mode" << std::endl;
    }
 
-   if ( tryCreateSharedID() )
-   {
-      std::cout << "ID created." << std::endl;
-   }
-   else
-   {
-      std::cout << "Could not create ID, seems like the service is already running." << std::endl;
-      exit(EXIT_FAILURE);
-   }
-
+   saveProcessId(*shm);
    setupInteruptionHandler();
    runCalculation();
 
-   try
+   if(shm->remove(SHM_NAME))
    {
-      shm.remove(SHM_NAME);
       std::cout << "Shared memory object removed, terminating program" << std::endl;
    }
-   catch(...)
+   else
    {
       std::cout << "Error removing shared memory object" << std::endl;
    }

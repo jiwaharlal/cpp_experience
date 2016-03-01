@@ -26,8 +26,6 @@ remove_definitions(-DCALCULATOR_REAL_VERSION)
 
 add_executable(${EXECUTABLE_NAME} app/daemonLoader.cpp)
 
-link_directories(Boost_LIBRARY_DIRS)
-
 target_link_libraries(${EXECUTABLE_NAME} 
    #${LIBRARY_NAME}
    ${Boost_LIBRARIES}
