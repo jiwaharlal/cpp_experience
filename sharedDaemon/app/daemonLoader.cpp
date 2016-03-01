@@ -1,34 +1,40 @@
-#include <iostream>
-
-#include <boost/random.hpp>
+#include <iostream> 
 #include <boost/chrono.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition_variable.hpp>
-#include <boost/program_options.hpp>
-#include <boost/scoped_ptr.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/program_options.hpp>
 #include <boost/program_options/options_description.hpp>
+#include <boost/random.hpp>
+#include <boost/scoped_ptr.hpp>
+#include <boost/thread/condition_variable.hpp>
+#include <boost/thread/mutex.hpp>
+#include <dlfcn.h>
 #include <string>
 #include <stdio.h>
 #include <unistd.h>
-
-//shm_open
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <string>
+#include <sstream>
 
-#include "../calculator/ICalculator.hpp"
-#include "../calculator/CalculatorFactory.hpp"
+#include "../calculatorCommon/ICalculator.hpp"
+
+//#define CALCULATOR_TEST_VERSION 42
+//#define CALCULATOR_REAL_VERSION 0
 
 namespace ip = boost::interprocess;
 namespace po = boost::program_options;
 
 const char* SHM_NAME = "carPositionProvider2_shared_memory_object";
+const char* CALC_LIB_NAME = "libcalculator.so";
 
 boost::condition_variable executionCondition;
 ip::shared_memory_object shm;
+void* calculatorLib = NULL;
+tDestroyCalculatorFn destroyCalculator = NULL;
+bool isUseTestLib = false;
 
 bool tryCreateSharedID()
 {
@@ -113,6 +119,7 @@ bool handleArguments(int argc, char** argv, po::variables_map& vm)
          ("help,?", "Produce help message")
          ("daemon,d", "Start a deamon")
          ("stop,k", "Stop daemon")
+         ("test,t", "Use test library version")
          ;
 
    try
@@ -124,13 +131,18 @@ bool handleArguments(int argc, char** argv, po::variables_map& vm)
    {
       std::cout << e.what() << std::endl;
       std::cout << desc << std::endl;
-      return false;
+      exit(EXIT_FAILURE);
    }
 
    if (vm.count("help"))
    {
       std::cout << desc << std::endl;
-      return false;
+      exit(EXIT_SUCCESS);
+   }
+
+   if (vm.count("test"))
+   {
+      isUseTestLib = true;
    }
 
    return true;
@@ -183,21 +195,66 @@ void setupInteruptionHandler()
    sigaction(SIGINT, &sigIntHandler, NULL);
 }
 
+ICalculator* loadCalculator()
+{
+   std::stringstream ss;
+   ss << (isUseTestLib ? CALCULATOR_TEST_VERSION : CALCULATOR_REAL_VERSION);
+   std::string libName = std::string(CALC_LIB_NAME) + "." + ss.str();
+   std::cout << "Loading library: " << libName << std::endl;
+   calculatorLib = dlopen((std::string("./lib/") + libName).c_str(), RTLD_NOW);
+   if (!calculatorLib)
+   {
+      std::cout << "Error. Could not load " << CALC_LIB_NAME << std::endl;
+      std::cout << dlerror() << std::endl;
+      return NULL;
+   }
+
+   tCreateCalculatorFn createCalculator = reinterpret_cast<tCreateCalculatorFn>(dlsym(calculatorLib, "create"));
+   destroyCalculator = reinterpret_cast<tDestroyCalculatorFn>(dlsym(calculatorLib, "destroy"));
+
+   if (!createCalculator || !destroyCalculator)
+   {
+      std::cout << "Error. Could not load library functions from " << CALC_LIB_NAME << std::endl;
+      return NULL;
+   }
+
+   return createCalculator();
+}
+
+void unloadCalculator(ICalculator* c)
+{
+   if (destroyCalculator)
+   {
+      destroyCalculator(c);
+      std::cout << "Calculator removed" << std::endl;
+   }
+   if (calculatorLib)
+   {
+      dlclose(calculatorLib);
+      std::cout << "Library closed" << std::endl;
+   }
+}
+
 void runCalculation()
 {
+   ICalculator* calc = loadCalculator();
+   if (!calc)
+   {
+      std::cout << "Error loading Calculator lib" << std::endl;
+      return;
+   }
+
    boost::mutex executionMutex;
    boost::unique_lock<boost::mutex> lock(executionMutex);
 
    boost::random::mt19937 rng;
    boost::random::uniform_int_distribution<> rndInt(-1000, 1000);
 
-   ICalculator* calc = CalculatorFactory::create();
-
    while (!isStop())
    {
       int v1 = rndInt(rng);
       int v2 = rndInt(rng);
-      int result = calc->add( v1, v2 );
+      int result = calc->add(v1, v2);
 
       std::cout << v1 << " + " << v2 << " = " << result << std::endl;
 
@@ -205,6 +262,8 @@ void runCalculation()
 
       executionCondition.wait_for(lock, boost::chrono::milliseconds(1000), &isStop);
    }
+
+   unloadCalculator(calc);
 }
 
 int main(int argc, char** argv)
@@ -248,7 +307,6 @@ int main(int argc, char** argv)
    }
 
    setupInteruptionHandler();
-
    runCalculation();
 
    try

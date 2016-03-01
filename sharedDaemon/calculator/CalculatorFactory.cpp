@@ -28,3 +28,13 @@ void CalculatorFactory::destroy(ICalculator* calculator)
 {
    delete calculator;
 }
+
+extern "C" ICalculator* create()
+{
+   return CalculatorFactory::create();
+}
+
+extern "C" void destroy(ICalculator* calc)
+{
+   delete calc;
+}

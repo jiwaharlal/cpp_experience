@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ICalculator.hpp"
+#include "../calculatorCommon/ICalculator.hpp"
 
 class Calculator: public ICalculator
 {

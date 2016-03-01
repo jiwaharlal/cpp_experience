@@ -5,7 +5,7 @@
  *                All rights reserved
  * Secrecy Level  STRICTLY CONFIDENTIAL
  *
- * @file     CalculatorFactory.hpp
+ * @file     TestCalculator.hpp
  * @author   Maxim Bondarenko
  * @date     01.03.2016
  */
@@ -14,12 +14,9 @@
 
 #include "../calculatorCommon/ICalculator.hpp"
 
-class CalculatorFactory
+class TestCalculator: public ICalculator
 {
 public:
-   static ICalculator* create();
-   static void destroy(ICalculator* calculator);
-private:
-   CalculatorFactory();
+   virtual int add(int lhs, int rhs);
 };
 
