@@ -5,11 +5,11 @@ include_directories( "${CMAKE_CURRENT_SOURCE_DIR}" )
 set(EXECUTABLE_NAME daemonLoader) 
 set(LIBRARY_NAME calculator)
 
-find_package(Boost COMPONENTS program_options REQUIRED)
+find_package(Boost COMPONENTS program_options thread system chrono REQUIRED)
 
-file(GLOB_RECURSE LIB_SRC lib/*.cpp)
+file(GLOB_RECURSE LIB_SRC calculator/*.cpp)
 
-add_library(${LIBRARY_NAME} ${LIB_SRC})
+add_library(${LIBRARY_NAME} SHARED ${LIB_SRC})
 
 add_executable(${EXECUTABLE_NAME} app/daemonLoader.cpp)
 
