@@ -17,36 +17,33 @@
 class CInstanceSynchronizer
 {
 public:
-   static CInstanceSynchronizer* tryOpen(const char* sharedObjectName);
-   static CInstanceSynchronizer* tryCreate(const char* sharedObjectName);
-   ~CInstanceSynchronizer();
-
-   void setAttached(bool isAttached);
-   bool stopInstance();
-   void saveThisInstanceId();
-
-   class IUniqueInstance
-   {
-   public:
-      virtual void setAttached(bool isAttached);
-      virtual bool saveProcessId();
-   };
-
+   class IUniqueInstance;
    static IUniqueInstance* createUnique(const char* instanceName);
 
-   class IInstanceHandler
-   {
-   public:
-      virtual bool stopInstance();
-      virtual int processId();
-   };
-
-   static IInstanceHandler* getHandler(const char* instanceHane);
+   class IInstanceHandler;
+   static IInstanceHandler* getHandler(const char* instanceName);
 
 private:
-   CInstanceSynchronizer(boost::interprocess::shared_memory_object& shmo, bool isAttached);
+   //CInstanceSynchronizer(boost::interprocess::shared_memory_object& shmo, bool isAttached);
+   CInstanceSynchronizer();
 
    boost::interprocess::shared_memory_object mShmo;
    bool mIsAttached;
+};
+
+class CInstanceSynchronizer::IUniqueInstance
+{
+public:
+   virtual ~IUniqueInstance() {}
+   virtual void setAttached(bool isAttached) = 0;
+   virtual bool saveProcessId() = 0;
+};
+
+class CInstanceSynchronizer::IInstanceHandler
+{
+public:
+   virtual ~IInstanceHandler() {}
+   virtual bool stopInstance() = 0;
+   virtual int getProcessId() = 0;
 };
 

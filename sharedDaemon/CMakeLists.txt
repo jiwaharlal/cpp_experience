@@ -24,7 +24,8 @@ endif()
 remove_definitions(-DCALCULATOR_TEST_VERSION)
 remove_definitions(-DCALCULATOR_REAL_VERSION)
 
-add_executable(${EXECUTABLE_NAME} app/daemonLoader.cpp)
+file(GLOB APP_SRC app/*.cpp)
+add_executable(${EXECUTABLE_NAME} ${APP_SRC})
 
 target_link_libraries(${EXECUTABLE_NAME} 
    #${LIBRARY_NAME}

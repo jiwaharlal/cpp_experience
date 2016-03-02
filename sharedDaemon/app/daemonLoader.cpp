@@ -36,81 +36,6 @@ const char* CALC_LIB_NAME = "libcalculator.so";
 boost::condition_variable executionCondition;
 bool isUseTestLib = false;
 
-bool saveProcessId(ip::shared_memory_object& shm)
-{
-   try
-   {
-      shm.truncate( sizeof(int));
-      ip::mapping_handle_t mappingHandle = shm.get_mapping_handle();
-      int* pId = reinterpret_cast<int*>(mmap(NULL, sizeof(int), PROT_WRITE, MAP_SHARED, mappingHandle.handle, 0));
-      if ( pId == MAP_FAILED )
-      {
-         std::cout << "Mapping error" << strerror(errno) << std::endl;
-         return false;
-      }
-      *pId = getpid();
-      if ( munmap(pId, sizeof(int)) != 0 )
-      {
-         std::cout << "Unmapping error " << strerror(errno) << std::endl;
-         return false;
-      }
-   } 
-   catch(ip::interprocess_exception& e)
-   {
-      // executable is already running
-      std::cout << e.what() << std::endl;
-      return false; 
-   }
-
-   return true;
-}
-
-bool tryStopService()
-{
-   try 
-   {
-      ip::shared_memory_object newShm(ip::open_only, SHM_NAME, ip::read_only);
-      ip::offset_t size;
-      newShm.get_size(size);
-      if ( size != sizeof(int) )
-      {
-         std::cout << "Wrong size of shared momory object." << std::endl;
-         return false;
-      }
-      ip::mapping_handle_t mappingHandle = newShm.get_mapping_handle();
-      int* pId = reinterpret_cast<int*>(mmap(NULL, sizeof(int), PROT_READ, MAP_SHARED, mappingHandle.handle, 0));
-      if ( pId == MAP_FAILED )
-      {
-         std::cout << "Mapping error" << std::endl;
-         return false;
-      }
-      
-      std::cout << "Process id is " << *pId << ", sending termination signal..." << std::endl;
-      if (kill(*pId, SIGINT) != 0)
-      {
-         std::cout << "Error sending interuption signal. " << strerror(errno) << std::endl;
-      }
-
-      if ( munmap(pId, sizeof(int)) != 0 )
-      {
-         std::cout << "Unmapping error " << strerror(errno) << std::endl;
-         // since program will terminate on a next step, not critical
-      }
-   }
-   catch(ip::interprocess_exception& e)
-   {
-      std::cout << e.what() << std::endl;
-      return false;
-   }
-   catch(...)
-   {
-      std::cout << "Unknown error" << std::endl;
-      return false;
-   }
-
-   return true;
-}
-
 bool handleArguments(int argc, char** argv, po::variables_map& vm)
 {
    po::options_description desc("Valid options");
@@ -247,11 +172,13 @@ int main(int argc, char** argv)
 
    if (vm.count("stop")) // stop daemon
    {
-
+      boost::scoped_ptr<CInstanceSynchronizer::IInstanceHandler>
+         handler(CInstanceSynchronizer::getHandler("carPositioner"));
+      
       //CInstanceSynchronizer* sync = CInstanceSynchronizer::tryOpen("carPositioner");
-      if ( sync )
+      if ( handler )
       {
-         if (sync->stopInstance())
+         if (handler->stopInstance())
          {
             std::cout << "Service stopped." << std::endl;
             exit(EXIT_SUCCESS);
@@ -269,38 +196,14 @@ int main(int argc, char** argv)
       }
    }
 
+   boost::shared_ptr<CInstanceSynchronizer::IUniqueInstance> 
+      instance(CInstanceSynchronizer::createUnique("carPositioner"));
 
-
-      //if ( tryStopService() )
-      //{
-         //std::cout << "Service stopped." << std::endl;
-         //exit(EXIT_SUCCESS);
-      //}
-
-      //std::cout << "Could not stop service." << std::endl;
-      //exit(EXIT_FAILURE);
-   //}
-
-   CInstanceSynchronizer::IUniqueInstance* instance = CInstanceSynchronizer::createUnique("carPositioner");
-   //CInstanceSynchronizer* sync = CInstanceSynchronizer::tryCreate("carPositioner");
    if (!instance)
    {
       std::cout << "Could not create ID, seems like the service is already running." << std::endl;
       exit(EXIT_FAILURE);
    }
-
-   //boost::scoped_ptr<ip::shared_memory_object> shm;
-   //try
-   //{
-      //shm.reset(new ip::shared_memory_object(ip::create_only, SHM_NAME, ip::read_write));
-   //} 
-   //catch(ip::interprocess_exception& e)
-   //{
-      //// executable is already running
-      //std::cout << e.what() << std::endl;
-      //std::cout << "Could not create ID, seems like the service is already running." << std::endl;
-      //exit(EXIT_FAILURE);
-   //}
 
    instance->setAttached(false);
    if (vm.count("daemon")) // run daemon 
@@ -315,19 +218,10 @@ int main(int argc, char** argv)
       std::cout << "Running in console mode" << std::endl;
    }
 
-   //saveProcessId(*shm);
+   instance->setAttached(true);
    instance->saveProcessId();
    setupInteruptionHandler();
    runCalculation();
-
-   //if(shm->remove(SHM_NAME))
-   {
-      std::cout << "Shared memory object removed, terminating program" << std::endl;
-   }
-   else
-   {
-      std::cout << "Error removing shared memory object" << std::endl;
-   }
 
    return 0;
 }
