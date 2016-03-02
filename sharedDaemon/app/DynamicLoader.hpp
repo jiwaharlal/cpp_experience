@@ -10,13 +10,19 @@ class eLibraryLoadException: public std::exception
 public:
    eLibraryLoadException(const char* libName, const char* reason = NULL)
    {
-      std::stringstream ss;
-      ss << "Error loading library: " << libName;
-      if (reason && strlen(reason))
+      try
       {
-         ss << " Reason: " << reason;
+         std::stringstream ss;
+         ss << "Error loading library: " << libName;
+         if (reason && strlen(reason))
+         {
+            ss << " Reason: " << reason;
+         }
+         mWhat = ss.str();
       }
-      mWhat = ss.str();
+      catch (...)
+      {
+      }
    }
 
    virtual ~eLibraryLoadException() throw() {}
