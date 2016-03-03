@@ -22,7 +22,7 @@
 
 #include "../calculatorCommon/ICalculator.hpp"
 #include "DynamicLoader.hpp"
-#include "CInstanceSynchronizer.hpp"
+#include "CUniqueInstance.hpp"
 
 //#define CALCULATOR_TEST_VERSION 42
 //#define CALCULATOR_REAL_VERSION 0
@@ -172,21 +172,22 @@ int main(int argc, char** argv)
 
    if (vm.count("stop")) // stop daemon
    {
-      boost::scoped_ptr<CInstanceSynchronizer::IInstanceHandler>
-         handler(CInstanceSynchronizer::getHandler("carPositioner"));
+      //boost::scoped_ptr<CUniqueInstance>
+         //handler(CInstanceSynchronizer::getHandler("carPositioner"));
+      int processId = CUniqueInstance::getProcessId(SHM_NAME);
       
       //CInstanceSynchronizer* sync = CInstanceSynchronizer::tryOpen("carPositioner");
-      if ( handler )
+      if (processId != -1)
       {
-         if (handler->stopInstance())
+         if (kill(processId, SIGINT) != 0)
          {
-            std::cout << "Service stopped." << std::endl;
-            exit(EXIT_SUCCESS);
+            std::cout << "Error sending interuption signal. " << strerror(errno) << std::endl;
+            exit(EXIT_FAILURE);
          }
          else
          {
-            std::cout << "Could not stop service." << std::endl;
-            exit(EXIT_FAILURE);
+            std::cout << "Interuption signal sent." << std::endl;
+            exit(EXIT_SUCCESS);
          }
       }
       else
@@ -196,8 +197,7 @@ int main(int argc, char** argv)
       }
    }
 
-   boost::shared_ptr<CInstanceSynchronizer::IUniqueInstance> 
-      instance(CInstanceSynchronizer::createUnique("carPositioner"));
+   boost::shared_ptr<CUniqueInstance> instance(CUniqueInstance::create(SHM_NAME));
 
    if (!instance)
    {
