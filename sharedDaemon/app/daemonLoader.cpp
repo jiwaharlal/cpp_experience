@@ -30,7 +30,7 @@
 namespace ip = boost::interprocess;
 namespace po = boost::program_options;
 
-const char* SHM_NAME = "carPositionProvider2_shared_memory_object";
+const char* SHM_NAME = "carPositionProvider2";
 const char* CALC_LIB_NAME = "libcalculator.so";
 
 boost::condition_variable executionCondition;

@@ -25,10 +25,11 @@ public:
    static int getProcessId(const char* instanceName);
 
 private:
-   CUniqueInstance(boost::interprocess::shared_memory_object& shmo);
+   CUniqueInstance(int fd);
    
 private:
+
+   int mPidFile;
    bool mIsAttached;
-   boost::interprocess::shared_memory_object mShmo;
 };
 

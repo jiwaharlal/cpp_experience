@@ -10,26 +10,30 @@
  * @date     02.03.2016
  */
 
-#include <boost/interprocess/shared_memory_object.hpp>
+#include <errno.h>
 #include <iostream>
 #include <signal.h>
+#include <sstream>
+#include <sys/file.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "CUniqueInstance.hpp"
 
 namespace ip = boost::interprocess;
 
 // private
-CUniqueInstance::CUniqueInstance(ip::shared_memory_object& shmo)
-   : mIsAttached(true)
+CUniqueInstance::CUniqueInstance(int fd)
+   : mPidFile(fd)
+   , mIsAttached(true)
 {
-   mShmo.swap(shmo);
 }
 
 CUniqueInstance::~CUniqueInstance()
 {
    if ( mIsAttached )
    {
-      ip::shared_memory_object::remove(mShmo.get_name());
+      flock(mPidFile, LOCK_UN);
    }
 }
 
@@ -42,28 +46,20 @@ bool CUniqueInstance::saveProcessId()
 {
    try
    {
-      mShmo.truncate( sizeof(int));
-      ip::mapping_handle_t mappingHandle = mShmo.get_mapping_handle();
-      int* pId = reinterpret_cast<int*>(mmap(NULL, sizeof(int), PROT_WRITE, MAP_SHARED, mappingHandle.handle, 0));
-      if ( pId == MAP_FAILED )
+      if (lseek(mPidFile, 0, SEEK_SET) != 0)
       {
-         std::cout << "Mapping error" << strerror(errno) << std::endl;
+         std::cout << "Error positioning in pid file: " << strerror(errno) << std::endl;
          return false;
       }
-      *pId = getpid();
-      if ( munmap(pId, sizeof(int)) != 0 )
+      int pid = getpid();
+      if (write(mPidFile, &pid, sizeof(pid)) != sizeof(pid))
       {
-         std::cout << "Unmapping error " << strerror(errno) << std::endl;
+         std::cout << "Error saving process id to file." << std::endl;
          return false;
       }
 
       return true;
    } 
-   catch(ip::interprocess_exception& e)
-   {
-      // executable is already running
-      std::cout << e.what() << std::endl;
-   }
    catch (...)
    {
       std::cout << "Unknown error while saving process ID." << std::endl;
@@ -88,15 +84,38 @@ bool CUniqueInstance::stopInstance(const char* instanceName)
    return true;
 }
 
+namespace 
+{
+   std::string pidFileName(const char* instanceName)
+   {
+      std::stringstream ss;
+      ss << "/var/run/" << instanceName << ".pid";
+      return ss.str();
+   }
+}
+
 CUniqueInstance* CUniqueInstance::create(const char* instanceName)
 {
    try
    {
-      ip::shared_memory_object shmo(ip::create_only, instanceName, ip::read_write);
-      return new CUniqueInstance(shmo);
+      std::string fileName = pidFileName(instanceName);
+      int fd = open(fileName.c_str(), O_CREAT | O_RDWR);
+      if (fd == -1)
+      {
+         std::cout << "Error creating locking file " << fileName << " " << strerror(errno) << std::endl;
+         return NULL;
+      }
+      if (flock(fd, LOCK_EX | LOCK_NB) != 0)
+      {
+         std::cout << "Failed to acquire lock on " << fileName << " " << strerror(errno) << std::endl;
+         return NULL;
+      }
+
+      return new CUniqueInstance(fd);
    }
    catch (...)
    {
+      std::cout << "Unknown error" << std::endl;
       return NULL;
    }
 }
@@ -105,40 +124,26 @@ int CUniqueInstance::getProcessId(const char* instanceName)
 {
    try 
    {
-      ip::shared_memory_object newShm(ip::open_only, instanceName, ip::read_only);
-      ip::offset_t size;
-      newShm.get_size(size);
-      if ( size != sizeof(int) )
+      std::string fileName = pidFileName(instanceName);
+      int fd = open(fileName.c_str(), O_RDONLY);
+      if (fd == -1)
       {
-         std::cout << "Wrong size of shared momory object." << std::endl;
+         std::cout << "Error opening locking file " << fileName << " " << strerror(errno) << std::endl;
          return -1;
       }
-      ip::mapping_handle_t mappingHandle = newShm.get_mapping_handle();
-      int* pId = reinterpret_cast<int*>(mmap(NULL, sizeof(int), PROT_READ, MAP_SHARED, mappingHandle.handle, 0));
-      if ( pId == MAP_FAILED )
+      int processId;
+      if (read(fd, &processId, sizeof(processId)) != sizeof(processId))
       {
-         std::cout << "Mapping error" << std::endl;
+         std::cout << "Error reading process ID from " << fileName << " " << strerror(errno) << std::endl;
          return -1;
       }
-      
-      int id = *pId;
 
-      if ( munmap(pId, sizeof(int)) != 0 )
-      {
-         std::cout << "Unmapping error " << strerror(errno) << std::endl;
-      }
-
-      return id;
-   }
-   catch(ip::interprocess_exception& e)
-   {
-      std::cout << e.what() << std::endl;
+      return processId;
    }
    catch(...)
    {
       std::cout << "Unknown error" << std::endl;
+      return -1;
    }
-
-   return -1;
 }
 
