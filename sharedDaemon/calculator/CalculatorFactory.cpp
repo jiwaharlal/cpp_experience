@@ -40,10 +40,3 @@ extern "C" void destroy(ICalculator* calc)
    delete calc;
 }
 
-extern "C" ILogger* registerLogger(ILogger* logger)
-{
-   ILogger* prevLogger = LoggerHolder::logger();
-   LoggerHolder::setLogger(logger);
-
-   return prevLogger;
-}

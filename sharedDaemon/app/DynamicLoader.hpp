@@ -2,6 +2,7 @@
 
 #include <dlfcn.h>
 #include <exception>
+#include <iostream>
 #include <sstream>
 #include <string.h>
 
@@ -48,9 +49,17 @@ DynamicLoader<LoadedType>::DynamicLoader(const char* libName)
    loadFunc("create", mCreate);
    loadFunc("destroy", mDestroy);
 
+   // set logger
    tRegisterLoggerFn registerLogger;
-   loadFunc("registerLogger", registerLogger);
-   registerLogger(LoggerInstance::instance());
+   try
+   {
+      loadFunc("registerLogger", registerLogger);
+      registerLogger(LoggerInstance::instance());
+   }
+   catch (CDynamicLoaderException& e)
+   {
+      std::cout << "Logging in library " << libName << " is not enabled " << e.what() << std::endl;
+   }
 }
 
 template <class LoadedType>

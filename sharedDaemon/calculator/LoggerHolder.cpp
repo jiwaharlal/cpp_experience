@@ -12,6 +12,8 @@
 
 #include "LoggerHolder.hpp"
 
+#ifdef ENABLE_LOG
+
 #include <stdlib.h>
 
 ILogger* LoggerHolder::mLogger = NULL;
@@ -21,7 +23,7 @@ LoggerHolder::LoggerHolder()
 
 }
 
-ILogger* LoggerHolder::logger()
+ILogger* LoggerHolder::getLogger()
 {
    return mLogger;
 }
@@ -30,3 +32,13 @@ void LoggerHolder::setLogger(ILogger* newLogger)
 {
    mLogger = newLogger;
 }
+
+extern "C" ILogger* registerLogger(ILogger* logger)
+{
+   ILogger* prevLogger = LoggerHolder::getLogger();
+   LoggerHolder::setLogger(logger);
+
+   return prevLogger;
+}
+
+#endif // ENABLE_LOG
