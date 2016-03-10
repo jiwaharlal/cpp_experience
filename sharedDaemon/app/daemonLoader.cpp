@@ -1,4 +1,3 @@
-#include <iostream> 
 #include <boost/chrono.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/program_options.hpp>
@@ -9,20 +8,23 @@
 #include <boost/thread/mutex.hpp>
 #include <dlfcn.h>
 #include <errno.h>
-#include <string>
+#include <fcntl.h>
+#include <iostream>
+#include <signal.h>
+#include <sstream>
 #include <stdio.h>
-#include <unistd.h>
+#include <stdlib.h>
+#include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #include <sys/types.h>
-#include <signal.h>
-#include <string>
-#include <sstream>
+#include <time.h>
+#include <unistd.h>
 
 #include "../calculatorCommon/ICalculator.hpp"
 #include "DynamicLoader.hpp"
 #include "CUniqueInstance.hpp"
+#include "LoggerInstance.hpp"
 
 //#define CALCULATOR_TEST_VERSION 42
 //#define CALCULATOR_REAL_VERSION 0
@@ -40,11 +42,17 @@ bool handleArguments(int argc, char** argv, po::variables_map& vm)
 {
    po::options_description desc("Valid options");
 
+   srand(time(NULL));
+   std::stringstream ss;
+   ss << rand();
+   std::string logHeader(ss.str());
+
    desc.add_options()
          ("help,?", "Produce help message")
          ("daemon,d", "Start a deamon")
          ("stop,k", "Stop daemon")
          ("test,t", "Use test library version")
+         ("header,h", po::value<std::string>(&logHeader)->default_value(logHeader), "Header to use in log messages")
          ;
 
    try
@@ -70,6 +78,11 @@ bool handleArguments(int argc, char** argv, po::variables_map& vm)
       isUseTestLib = true;
    }
 
+   if (vm.count("header"))
+   {
+      LoggerInstance::instance()->setHeader(logHeader.c_str());
+   }
+
    return true;
 }
 
@@ -82,7 +95,7 @@ bool startDaemon()
          std::cout << "Error creating daemon" << std::endl;
          return false;
       case 0: // daemon branch
-         setsid(); 
+         setsid();
 
          close(STDIN_FILENO);
          close(STDOUT_FILENO);
@@ -167,6 +180,7 @@ void runCalculation()
 
 int main(int argc, char** argv)
 {
+   std::cout << "in main()" << std::endl;
    po::variables_map vm;
    handleArguments(argc, argv, vm);
 
@@ -175,7 +189,7 @@ int main(int argc, char** argv)
       //boost::scoped_ptr<CUniqueInstance>
          //handler(CInstanceSynchronizer::getHandler("carPositioner"));
       int processId = CUniqueInstance::getProcessId(SHM_NAME);
-      
+
       //CInstanceSynchronizer* sync = CInstanceSynchronizer::tryOpen("carPositioner");
       if (processId != -1)
       {
@@ -199,28 +213,29 @@ int main(int argc, char** argv)
 
    boost::shared_ptr<CUniqueInstance> instance(CUniqueInstance::create(SHM_NAME));
 
-   if (!instance)
-   {
-      std::cout << "Could not create ID, seems like the service is already running." << std::endl;
-      exit(EXIT_FAILURE);
-   }
+   //if (!instance)
+   //{
+      //std::cout << "Could not create ID, seems like the service is already running." << std::endl;
+      //exit(EXIT_FAILURE);
+   //}
 
-   instance->setAttached(false);
-   if (vm.count("daemon")) // run daemon 
+   //instance->setAttached(false);
+   if (vm.count("daemon")) // run daemon
    {
       if (!startDaemon())
       {
          exit(EXIT_FAILURE);
-      } 
+      }
    }
    else
    {
       std::cout << "Running in console mode" << std::endl;
    }
 
-   instance->setAttached(true);
-   instance->saveProcessId();
+   //instance->setAttached(true);
+   //instance->saveProcessId();
    setupInteruptionHandler();
+   std::cout << "Start calculation" << std::endl;
    runCalculation();
 
    return 0;

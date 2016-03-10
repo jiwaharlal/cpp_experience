@@ -5,26 +5,22 @@
  *                All rights reserved
  * Secrecy Level  STRICTLY CONFIDENTIAL
  *
- * @file     CalculatorFactory.hpp
+ * @file     LoggerHolder.hpp
  * @author   Maxim Bondarenko
- * @date     01.03.2016
+ * @date     10.03.2016
  */
 
 #pragma once
 
-#include "../calculatorCommon/ICalculator.hpp"
-//#include "ILogger.hpp"
-
 class ILogger;
 
-class CalculatorFactory
+class LoggerHolder
 {
 public:
-   static ICalculator* create();
-   static void destroy(ICalculator* calculator);
+   static ILogger* logger();
+   static void setLogger(ILogger* newLogger);
 private:
-   CalculatorFactory();
-
+   LoggerHolder();
    static ILogger* mLogger;
 };
 

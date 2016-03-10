@@ -1,7 +1,18 @@
 #include "calculator.hpp"
 
+#include "LoggerHolder.hpp"
+#include "../calculatorCommon/ILogger.hpp"
+#include <sstream>
+
 int Calculator::add(int lhs, int rhs)
 {
+   if (LoggerHolder::logger())
+   {
+      std::stringstream ss;
+      ss << "Calculator::add(), Adding " << lhs << " + " << rhs;
+      LoggerHolder::logger()->log_info( ss.str().c_str() );
+   }
+
    return lhs + rhs;
 }
 

@@ -5,57 +5,9 @@
 #include <sstream>
 #include <string.h>
 
-class eLibraryLoadException: public std::exception
-{
-public:
-   eLibraryLoadException(const char* libName, const char* reason = NULL)
-   {
-      try
-      {
-         std::stringstream ss;
-         ss << "Error loading library: " << libName;
-         if (reason && strlen(reason))
-         {
-            ss << " Reason: " << reason;
-         }
-         mWhat = ss.str();
-      }
-      catch (...)
-      {
-      }
-   }
-
-   virtual ~eLibraryLoadException() throw() {}
-
-   virtual const char* what() const throw()
-   {
-      return mWhat.c_str();
-   }
-
-private:
-   std::string mWhat;
-};
-
-class eFunctionLoadException: public std::exception
-{
-public:
-   eFunctionLoadException(const char* functionName)
-   {
-      std::stringstream ss;
-      ss << "Error loading function: " << functionName;
-      mWhat = ss.str();
-   }
-
-   virtual ~eFunctionLoadException() throw() {}
-
-   virtual const char* what() const throw()
-   {
-      return mWhat.c_str();
-   }
-
-private:
-   std::string mWhat;
-};
+#include "CDynamicLoaderException.hpp"
+#include "../calculatorCommon/ILogger.hpp"
+#include "LoggerInstance.hpp"
 
 template <class LoadedType>
 class DynamicLoader
@@ -75,6 +27,7 @@ private:
 
    typedef LoadedType* (*tCreateFn)();
    typedef void (*tDestroyFn)(LoadedType*);
+   typedef ILogger* (*tRegisterLoggerFn)(ILogger*);
 
    tCreateFn mCreate;
    tDestroyFn mDestroy;
@@ -89,10 +42,15 @@ DynamicLoader<LoadedType>::DynamicLoader(const char* libName)
    mLibraryHandler = dlopen(libName, RTLD_NOW);
    if (!mLibraryHandler)
    {
-      throw eLibraryLoadException(libName, dlerror());
+      //throw eLibraryLoadException(libName, dlerror());
+      throw CDynamicLoaderException(libName, dlerror());
    }
    loadFunc("create", mCreate);
    loadFunc("destroy", mDestroy);
+
+   tRegisterLoggerFn registerLogger;
+   loadFunc("registerLogger", registerLogger);
+   registerLogger(LoggerInstance::instance());
 }
 
 template <class LoadedType>
@@ -111,7 +69,8 @@ void DynamicLoader<LoadedType>::loadFunc(const char* functionName, FunctionType&
    func = reinterpret_cast<FunctionType>(dlsym(mLibraryHandler, functionName));
    if (!func)
    {
-      throw eFunctionLoadException(functionName);
+      //throw eFunctionLoadException(functionName);
+      throw CDynamicLoaderException(functionName, dlerror());
    }
 }
 

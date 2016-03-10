@@ -12,6 +12,7 @@
 
 #include "CalculatorFactory.hpp"
 #include "calculator.hpp"
+#include "LoggerHolder.hpp"
 
 // private
 CalculatorFactory::CalculatorFactory()
@@ -37,4 +38,12 @@ extern "C" ICalculator* create()
 extern "C" void destroy(ICalculator* calc)
 {
    delete calc;
+}
+
+extern "C" ILogger* registerLogger(ILogger* logger)
+{
+   ILogger* prevLogger = LoggerHolder::logger();
+   LoggerHolder::setLogger(logger);
+
+   return prevLogger;
 }
