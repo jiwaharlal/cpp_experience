@@ -1,3 +1,5 @@
 sharedDaemon/build/*
 a.out
 *.swp
+heaps/proj_qtcreator
+*.user

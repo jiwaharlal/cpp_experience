@@ -1,5 +1,7 @@
 #include <iostream>
 #include <set>
+#include <boost/static_assert.hpp>
+#include <boost/assert.hpp>
 
 class A
 {
@@ -28,12 +30,17 @@ public:
 };
 
 int main(int argc, char** argv) {
+   //BOOST_STATIC_ASSERT(sizeof(double) == 8);
    (void) argc;
    (void) argv;
+
+   std::cout << "external " << EXTERNAL_STR << std::endl;
 
    Printer<A> pa;
 
    pa.p();
+
+   //BOOST_ASSERT(false);
 
    return 0;
 }
