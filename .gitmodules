@@ -1,0 +1,3 @@
+[submodule "GpsReader/minmea"]
+	path = GpsReader/minmea
+	url = https://github.com/cloudyourcar/minmea.git
