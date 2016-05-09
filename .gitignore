@@ -3,3 +3,4 @@ a.out
 *.swp
 heaps/proj_qtcreator
 *.user
+GpsReader/build

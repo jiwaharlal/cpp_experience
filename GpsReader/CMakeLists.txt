@@ -1,3 +1,42 @@
 cmake_minimum_required(VERSION 2.8)
 
-file(GLOB_RECURSE SRC app)
+set(PROJECT devReader)
+
+find_package(Boost COMPONENTS program_options REQUIRED)
+#find_package(Boost COMPONENTS program_options thread system chrono REQUIRED)
+
+set(LIBS ${Boost_LIBRARIES})
+
+file(GLOB_RECURSE SRC app/*.cpp)
+
+# remove entry point file
+foreach(SRC_FILE int ${SRC})
+   string(FIND ${SRC_FILE} DevReader.cpp POS)
+   if(NOT ${POS} EQUAL -1)
+      list(REMOVE_ITEM SRC ${SRC_FILE})
+      break()
+   endif()
+endforeach()
+
+#list(REMOVE_ITEM SRC DevReader.cpp)
+message("Src without main: ${SRC}")
+
+# tests
+file(GLOB_RECURSE TEST_SRC test/*.cpp)
+set(TEST test_${PROJECT})
+message("${TEST} ${TEST_SRC}")
+include_directories(app)
+add_executable(${TEST} ${SRC} ${TEST_SRC})
+target_link_libraries(${TEST}
+   ${LIBS})
+enable_testing()
+add_test(${TEST} ${TEST})
+
+message("Source: ${SRC}")
+
+set(EXECUTABLE_NAME ${PROJECT})
+
+add_executable(${EXECUTABLE_NAME} ${SRC} app/DevReader.cpp)
+
+target_link_libraries(${EXECUTABLE_NAME} 
+   ${LIBS})
