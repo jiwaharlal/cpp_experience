@@ -2,6 +2,7 @@
 #include <boost/program_options/options_description.hpp>
 #include <errno.h>
 #include <fcntl.h>
+#include <iomanip>
 #include <iostream>
 #include <signal.h>
 #include <stdlib.h>
@@ -86,7 +87,7 @@ public:
    int fd;
 };
 
-int main(int argc, char** argv) 
+int main(int argc, char** argv)
 {
    AppSettings settings = handleArgs(argc, argv);
 
@@ -132,10 +133,11 @@ int main(int argc, char** argv)
                   if (minmea_sentence_id(sentence.c_str(), false) == MINMEA_SENTENCE_RMC)
                   {
                      minmea_sentence_rmc frame;
-                     if (minmea_parse_rmc(&frame, sentence.c_str())) 
+                     if (minmea_parse_rmc(&frame, sentence.c_str()))
                      {
-                        std::cout << "Lat: " << frame.latitude.value
-                                    << " Lon: " << frame.longitude.value << std::endl;
+                        double lat = minmea_tocoord(&(frame.latitude));
+                        double lon = minmea_tocoord(&(frame.longitude));
+                        std::cout << "Lat " << std::fixed << std::setprecision(5) << lat << " Lon " << lon << std::endl;
                      }
                   }
                   //std::cout << sentence << std::endl;
