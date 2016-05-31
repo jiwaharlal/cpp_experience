@@ -3,4 +3,6 @@ a.out
 *.swp
 heaps/proj_qtcreator
 *.user
+boostPractice/build
 GpsReader/build
+*.out
