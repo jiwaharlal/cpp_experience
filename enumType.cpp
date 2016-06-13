@@ -75,6 +75,17 @@ struct ChannelGpsFixType
       GpsFix2D,      // A 2D-GPS Fix are available. The height member of GPS is constant, the position could be unstable.
       GpsFix3D       // A fully 3D-Fix are available. All normal position member of the GPS dataset are valid.
    };
+
+   ChannelGpsFixType() : value(GpsFix2D) {}
+   operator EType() { return value; }
+
+   EType value;
+};
+
+struct GpsQuality
+{
+   int numberOfSatellites;
+   ChannelGpsFixType fixType;
 };
 
 TEnumConverter<GpsFixType, ChannelGpsFixType::EType> createFixTypeConverter()
@@ -137,8 +148,18 @@ struct ValueConverter
 
 int main(int, char**)
 {
+   GpsFixType ft;
+   std::cout << "Simple enum value " << ft << std::endl;
+
+   //ChannelGpsFixType fixType;
+   GpsQuality q = {0};
+   std::cout << sEmbeddedTypeToStr.convert(q.fixType) << std::endl;
+
    std::cout << toStr(sFixTypeConverter.convert(GpsFixType_Fix2D)) << std::endl;
    std::cout << toStr(sFixTypeConverter.convert(ChannelGpsFixType::GpsFix3D)) << std::endl;
+
+   std::cout << "sizeof enum " << sizeof(ChannelGpsFixType::EType) << std::endl;
+   std::cout << "sizeof ChannelGpsFixType " << sizeof(ChannelGpsFixType) << std::endl;
 
    return 0;
 }
