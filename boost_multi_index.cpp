@@ -45,7 +45,20 @@ std::ostream& operator<<(std::ostream& out, const RequestInfo& i)
 struct tileId{};
 struct requestId{};
 
-int main(int argc, char** argv)
+struct RequestIdExtractor
+{
+   RequestIdExtractor(const RequestInfo& ri)
+      : requestId(ri.requestId)
+   {}
+
+   int requestId;
+};
+
+struct RequestRemover
+{
+};
+
+int main(int, char**)
 {
 
    typedef boost::multi_index_container<
@@ -67,7 +80,8 @@ int main(int argc, char** argv)
    requests.insert(r3);
 
    //tRequestMap::index_const_iterator<tileId> = get<tileId>(
-   const typename boost::multi_index::index<tRequestMap, tileId>::type& tileIdMap = get<tileId>(requests);
+   //const typename boost::multi_index::index<tRequestMap, tileId>::type& tileIdMap = get<tileId>(requests);
+   const typename boost::multi_index::index<tRequestMap, tileId>::type& tileIdMap = requests.get<tileId>();
    const typename boost::multi_index::index<tRequestMap, requestId>::type& reqIdMap = get<requestId>(requests);
 
    bool isForRoute = tileIdMap.find(1)->isForRoute;
@@ -75,6 +89,7 @@ int main(int argc, char** argv)
 
    std::cout << tileIdMap.count(2) << std::endl;
    std::cout << *(tileIdMap.find(3)) << std::endl;
+   std::cout << "find tileId = 4 " << (tileIdMap.find(4) == tileIdMap.end()) << std::endl;
 
    std::cout << requests.size() << std::endl;
    //requests.erase(tileIdMap.find(1));
@@ -84,11 +99,7 @@ int main(int argc, char** argv)
    std::cout << *(requests.begin()) << std::endl;
 
    // on getMapData
-   tiles = tileCalculator.calculate();
-
-
-
-
+   //tiles = tileCalculator.calculate();
 
    std::cout << "===========================" << std::endl;
    std::copy(tileIdMap.begin(), tileIdMap.end(), std::ostream_iterator<const RequestInfo&>(std::cout, "\n"));
@@ -99,9 +110,19 @@ int main(int argc, char** argv)
    tRequestMap rm2;
    std::vector<RequestInfo> rv;
    std::set_difference(tileIdMap.begin(), tileIdMap.end(), tilesToDrop.begin(), tilesToDrop.end(), std::inserter(rm2, rm2.end()), TileIdComparator());
+   std::vector<RequestIdExtractor> requestsLeft;
+   std::set_difference(tileIdMap.begin(), tileIdMap.end(), tilesToDrop.begin(), tilesToDrop.end(), std::back_inserter(requestsLeft), TileIdComparator());
 
    std::cout << "===========================" << std::endl;
    std::copy(rm2.begin(), rm2.end(), std::ostream_iterator<const RequestInfo&>(std::cout, "\n"));
+
+   std::cout << "strange print:" << std::endl;
+   std::copy(&r1, &r1 + 1, std::ostream_iterator<const RequestInfo&>(std::cout, "\n"));
+
+   if (rv.begin())
+   {
+      std::cout << "Can be converted to bool" << std::endl;
+   }
 
    return 0;
 }
