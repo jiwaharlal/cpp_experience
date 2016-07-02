@@ -12,6 +12,7 @@
 #include <boost/lambda/lambda.hpp>
 #include <cstdio>
 #include <boost/function.hpp>
+#include <boost/lambda/control_structures.hpp>
 
 using namespace boost::lambda;
 
@@ -73,6 +74,11 @@ template <class T>
 boost::function<T (const T&) > createMyltiplier( const T& val )
 {
     return (_1 * val);
+}
+
+bool isEven(int i)
+{
+   return i % 2 == 0;
 }
 
 void sets()
