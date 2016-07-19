@@ -2,6 +2,8 @@ cmake_minimum_required (VERSION 2.8)
 
 set (EXECUTABLE_NAME boostPractice)
 
+add_definitions(-std=c++11)
+
 include_directories( "${CMAKE_CURRENT_SOURCE_DIR}" )
 
 find_package(Boost COMPONENTS program_options thread system chrono REQUIRED)
@@ -30,4 +32,6 @@ target_link_libraries(${EXECUTABLE_NAME}
    ${Boost_REDUCED_LIB_LIST}
    rt
    dl
+   pthread
+   boost_thread
    )
