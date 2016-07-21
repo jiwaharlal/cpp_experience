@@ -44,6 +44,7 @@ boost::future<std::string> getString()
 }
 
 struct FutureHolder;
+
 template <class FutureType>
 struct FutureHolderImpl;
 

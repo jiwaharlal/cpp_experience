@@ -1,19 +1,14 @@
-#define BOOST_THREAD_PROVIDES_FUTURE
-#include <boost/thread/future.hpp>
 #include <iostream>
-
-boost::future<int> getInt(const std::string&)
-{
-   boost::promise<int> pi;
-   pi.set_value(42);
-   return pi.get_future();
-}
+#include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 
 int main(int, char**)
 {
-   boost::future<int> f;
+   typedef boost::shared_ptr<std::string> tStrPtr;
+   tStrPtr str1(new std::string("hello"));
+   tStrPtr str2 = str1;
 
-   std::cout << getInt("give me int").get() << std::endl;
+   std::cout << (str1 == str2) << std::endl;
 
    return 0;
 }
