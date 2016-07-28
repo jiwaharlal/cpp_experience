@@ -35,25 +35,39 @@ typedef boost::variant<boost::detail::variant::over_sequence<tMsgTypeList> > tMs
 
 class FirstSecondActor: public TActor<tMsgTypeList>
 {
-   virtual void on(boost::shared_ptr<FirstMessage>)
+public:
+   FirstSecondActor(boost::shared_ptr<CBoard> board)
+      : TActor(board)
+   {
+      board->subscribe(static_cast<THandlerBase<FirstMessage>*>(this));
+   }
+
+private:
+   virtual void operator ()(boost::shared_ptr<FirstMessage>)
    {
       std::cout << "First message handled" << std::endl;
    }
 
-   virtual void on(boost::shared_ptr<SecondMessage>)
+   virtual void operator ()(boost::shared_ptr<SecondMessage>)
    {
+      std::cout << "SecondMessage handled" << std::endl;
    }
-
-   //void on(const SecondMessage&) {}
-   //void on(const ThirdMessage&) {}
 };
 
 int main(int, char**)
 {
-   boost::shared_ptr<FirstSecondActor> actor(new FirstSecondActor());
+   boost::shared_ptr<CBoard> board(new CBoard);
+   boost::shared_ptr<FirstSecondActor> actor(new FirstSecondActor(board));
+
+   actor->run();
+
+   boost::this_thread::sleep(boost::posix_time::milliseconds(200));
+
    tFirstMessagePtr fm(new FirstMessage);
    actor->post(fm);
 
+   boost::this_thread::sleep(boost::posix_time::milliseconds(200));
+   actor->stop();
    //std::cout << actor->mMsgQueue.size() << " messages in queue" << std::endl;
 
    //std::cout << "Size of actor: " << sizeof(FirstSecondActor) << std::endl;

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <boost/foreach.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/type_index.hpp>
@@ -12,24 +14,27 @@ struct HandlerListBase {};
 template <typename MessageType>
 struct HandlerList: public HandlerListBase
 {
-   std::set<THandlerBase<MessageType> > mHandlers;
+   std::set<THandlerBase<MessageType>* > mHandlers;
 };
 
 class CBoard
 {
 public:
    template <typename MessageType>
-   void subscribe(THandlerBase<MessageType>& handler)
+   void subscribe(THandlerBase<MessageType>* handler)
    {
       std::string typeName = boost::typeindex::type_id<MessageType>().raw_name();
-      boost::shared_ptr<HandlerListBase> hl = mHandlerMap[typeName];
+      boost::shared_ptr<HandlerListBase>& hl = mHandlerMap[typeName];
       if (!hl)
       {
          hl.reset(new HandlerList<MessageType>());
       }
-      std::set<THandlerBase<MessageType> >& handlers = static_cast<HandlerList<MessageType>* >(hl.get())->mHandlers;
+      std::set<THandlerBase<MessageType>* >& handlers = static_cast<HandlerList<MessageType>* >(hl.get())->mHandlers;
       handlers.insert(handler);
    }
+
+   //template <typename MessageType>
+   //void subscribe(boost::shared_ptr<MessageType>
 
    template <typename MessageType>
    void unsubscribe(THandlerBase<MessageType>& handler);
@@ -38,18 +43,22 @@ public:
    void publish(MessageType message)
    {
       typedef std::set<THandlerBase<MessageType> > tHandlerSet;
+
       std::string typeName = boost::typeindex::type_id<MessageType>().raw_name();
-      boost::shared_ptr<HandlerListBase> hl = mHandlerMap[typeName];
-      if (!hl)
+
+      tHandlerMap::iterator it = mHandlerMap.find(typeName);
+      if (it == mHandlerMap.end())
       {
-         hl.reset(new HandlerList<MessageType>());
+         return;
       }
-      std::set<THandlerBase<MessageType> >& handlers = static_cast<HandlerList<MessageType>* >(hl.get())->mHandlers;
+
+      std::set<THandlerBase<MessageType> >& handlers = static_cast<HandlerList<MessageType>* >(it->second.get())->mHandlers;
       BOOST_FOREACH(typename tHandlerSet::reference handler, handlers)
       {
-         handler.post(message);
+         handler->post(message);
       }
    }
+
 private:
    typedef std::map<std::string, boost::shared_ptr<HandlerListBase> > tHandlerMap;
    tHandlerMap mHandlerMap;

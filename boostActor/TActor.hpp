@@ -1,7 +1,10 @@
+#pragma once
+
 #include <boost/atomic.hpp>
 #include <boost/mpl/for_each.hpp>
 #include <boost/thread.hpp>
 #include <boost/variant.hpp>
+#include <boost/variant/apply_visitor.hpp>
 #include <queue>
 
 #include "THandlerBase.hpp"
@@ -27,8 +30,14 @@ struct shared_ptr_variant
 };
 
 template <typename MsgTypeList>
-class TActor : public THandlerBase<typename wrap_list_with_ptr<MsgTypeList>::type>
+//class TActor : public THandlerBase<typename wrap_list_with_ptr<MsgTypeList>::type>
+class TActor : public THandlerBase<MsgTypeList>, public boost::static_visitor<>
 {
+   typedef typename wrap_list_with_ptr<MsgTypeList>::type MsgPtrList;
+
+public:
+   typedef void result_type;
+
 public:
    TActor(boost::shared_ptr<CBoard> board) : mBoard(board) {}
 
@@ -46,11 +55,12 @@ public:
 
    virtual void post(const boost::any& anyMsg)
    {
-      boost::mpl::for_each<MsgTypeList>(MsgPusher(mMsgQueue, anyMsg));
+      boost::mpl::for_each<MsgPtrList>(MsgPusher(mMsgQueue, anyMsg));
    }
 
 private:
    typedef typename shared_ptr_variant<MsgTypeList>::type tMsgVariant;
+   //typedef typename boost::make_variant_over<MsgTypeList>::type tMsgVariant;
    typedef std::queue<tMsgVariant> tMsgQueue;
 
    struct MsgPusher
@@ -88,7 +98,8 @@ private:
 
          while (mMsgQueue.empty())
          {
-            tMsgVariant msg = mMsgQueue.pop();
+            tMsgVariant msg = mMsgQueue.front();
+            mMsgQueue.pop();
             boost::apply_visitor(*this, msg);
          }
       }
@@ -98,7 +109,8 @@ private:
    tMsgQueue mMsgQueue;
    boost::atomic<bool> mIsStop;
    boost::thread mThread;
-   boost::shared_ptr<CBoard> mBoard;
    boost::condition_variable mCondition;
+protected:
+   boost::shared_ptr<CBoard> mBoard;
 };
 

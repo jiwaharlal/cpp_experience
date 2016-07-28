@@ -1,3 +1,5 @@
+#pragma once
+
 #include <boost/mpl/and.hpp>
 #include <boost/mpl/size.hpp>
 #include <boost/mpl/is_sequence.hpp>
@@ -11,10 +13,13 @@
 template <typename T, typename = void>
 class THandlerBase
 {
+   typedef boost::shared_ptr<T> tPtr;
 public:
-   void operator ()(T msg) { on(msg); }
-   virtual void on(T) = 0;
-   void post(T msg) { post(boost::any(msg)); }
+   virtual void operator ()(tPtr msg) = 0;
+   //virtual void on(tPtr) = 0;
+   //void operator ()(T& msg) { on(msg); }
+   //virtual void on(T&) = 0;
+   void post(tPtr msg) { post(boost::any(msg)); }
 private:
    virtual void post(const boost::any&) = 0;
 };
