@@ -1,8 +1,12 @@
-#include <boost/variant.hpp>
+#include <boost/atomic.hpp>
 #include <boost/mpl/for_each.hpp>
+#include <boost/thread.hpp>
+#include <boost/variant.hpp>
 #include <queue>
 
 #include "THandlerBase.hpp"
+
+class CBoard;
 
 template <typename T>
 struct add_shared_ptr
@@ -22,32 +26,16 @@ struct shared_ptr_variant
    typedef typename boost::make_variant_over<typename wrap_list_with_ptr<TypeList>::type>::type type;
 };
 
-//template <class TypeList>
-//struct shared_ptr_variant
-//{
-   //typedef typename boost::make_variant_over
-   //<
-      //typename boost::mpl::transform
-      //<
-         //TypeList,
-         //add_shared_ptr<boost::mpl::_1>
-      //>::type
-   //>::type type;
-//};
-
-//template <typename TypeList>
-//class CActor: public IHandler<typename boost::mpl::transform<TypeList, add_shared_ptr<boost::mpl::_1>::type>::type>;
-
 template <typename MsgTypeList>
 class TActor : public THandlerBase<typename wrap_list_with_ptr<MsgTypeList>::type>
 {
 public:
-   CActor(CBoard& board) : mBoard(board) {}
+   TActor(boost::shared_ptr<CBoard> board) : mBoard(board) {}
 
    void run()
    {
       mIsStop = false;
-      mThread = boost::thread(boost::bind(&CActor::threadFunction, this));
+      mThread = boost::thread(boost::bind(&TActor::threadFunction, this));
    }
 
    void stop()
@@ -85,6 +73,32 @@ private:
    };
 
 private:
+   void threadFunction()
+   {
+      while (true)
+      {
+         boost::mutex m;
+         boost::unique_lock<boost::mutex> lk(m);
+
+         mCondition.wait(lk);
+         if (mIsStop)
+         {
+            break;
+         }
+
+         while (mMsgQueue.empty())
+         {
+            tMsgVariant msg = mMsgQueue.pop();
+            boost::apply_visitor(*this, msg);
+         }
+      }
+   }
+
+private:
    tMsgQueue mMsgQueue;
+   boost::atomic<bool> mIsStop;
+   boost::thread mThread;
+   boost::shared_ptr<CBoard> mBoard;
+   boost::condition_variable mCondition;
 };
 

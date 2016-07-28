@@ -100,8 +100,8 @@ public:
       handlers.insert(handler);
    }
 
-   //template <typename MessageType>
-   //void unsubscribe(IHandler<MessageType>& handler);
+   template <typename MessageType>
+   void unsubscribe(IHandler<MessageType>& handler);
 
    template <typename MessageType>
    void publish(MessageType message)
@@ -118,13 +118,6 @@ public:
       {
          handler.post(message);
       }
-      //boost::range::for_each(
-            //static_cast<HandlerList<MessageType>* >(hl.get())->mHandlers,
-            //boost::lambda::bind(&IHandler<MessageType>::post(message), _1) );
-      //BOOST_FOREACH(IHandler<MessageType>& handler, static_cast<HandlerList<MessageType>* >(hl.get())->mHandlers)
-      //{
-         //handler.post(message);
-      //}
    }
 private:
    typedef std::map<std::string, boost::shared_ptr<HandlerListBase> > tHandlerMap;

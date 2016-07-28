@@ -12,9 +12,9 @@ template <typename T, typename = void>
 class THandlerBase
 {
 public:
-   void operator ()(const T& msg) { on(msg); }
-   virtual void on(const T&) = 0;
-   void post(T& msg) { post(boost::any(msg)); }
+   void operator ()(T msg) { on(msg); }
+   virtual void on(T) = 0;
+   void post(T msg) { post(boost::any(msg)); }
 private:
    virtual void post(const boost::any&) = 0;
 };
