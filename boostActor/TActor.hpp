@@ -8,6 +8,7 @@
 #include <queue>
 
 #include "THandlerBase.hpp"
+#include "TVariant.hpp"
 
 class CBoard;
 
@@ -26,14 +27,14 @@ struct wrap_list_with_ptr
 template <typename TypeList>
 struct shared_ptr_variant
 {
-   typedef typename boost::make_variant_over<typename wrap_list_with_ptr<TypeList>::type>::type type;
+   typedef TVariant<typename wrap_list_with_ptr<TypeList>::type> type;
 };
 
 template <typename MsgTypeList>
-//class TActor : public THandlerBase<typename wrap_list_with_ptr<MsgTypeList>::type>
-class TActor : public THandlerBase<MsgTypeList>, public boost::static_visitor<>
+class TActor : public THandlerBase<typename wrap_list_with_ptr<MsgTypeList>::type>
 {
    typedef typename wrap_list_with_ptr<MsgTypeList>::type MsgPtrList;
+   typedef typename shared_ptr_variant<MsgTypeList>::type tMsgVariant;
 
 public:
    typedef void result_type;
@@ -51,15 +52,18 @@ public:
    {
       mIsStop = true;
       mCondition.notify_one();
+      mThread.join();
    }
 
+   //virtual void post(const tMsgVariant& msg)
    virtual void post(const boost::any& anyMsg)
    {
       boost::mpl::for_each<MsgPtrList>(MsgPusher(mMsgQueue, anyMsg));
+      mCondition.notify_one();
+      //mMsgQueue.push(msg);
    }
 
 private:
-   typedef typename shared_ptr_variant<MsgTypeList>::type tMsgVariant;
    //typedef typename boost::make_variant_over<MsgTypeList>::type tMsgVariant;
    typedef std::queue<tMsgVariant> tMsgQueue;
 
@@ -75,9 +79,11 @@ private:
       {
          if (mAnyMsg.type() == typeid(MsgType))
          {
+            std::cout << "pushing message to queue" << std::endl;
             mMsgQueue.push(tMsgVariant(boost::any_cast<MsgType>(mAnyMsg)));
          }
       }
+
       tMsgQueue& mMsgQueue;
       const boost::any& mAnyMsg;
    };
@@ -90,17 +96,23 @@ private:
          boost::mutex m;
          boost::unique_lock<boost::mutex> lk(m);
 
+         std::cout << "waiting" << std::endl;
          mCondition.wait(lk);
+         std::cout << "notified" << std::endl;
+
          if (mIsStop)
          {
+            std::cout << "stopping" << std::endl;
             break;
          }
 
-         while (mMsgQueue.empty())
+         while (!mMsgQueue.empty())
          {
+            std::cout << "extracting message from queue" << std::endl;
             tMsgVariant msg = mMsgQueue.front();
             mMsgQueue.pop();
-            boost::apply_visitor(*this, msg);
+            //boost::apply_visitor(*this, msg);
+            msg.apply(*this);
          }
       }
    }

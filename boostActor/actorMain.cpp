@@ -31,7 +31,7 @@ typedef boost::shared_ptr<SecondMessage> tSecondMessagePtr;
 struct ThirdMessage{};
 
 typedef boost::mpl::list<FirstMessage, SecondMessage> tMsgTypeList;
-typedef boost::variant<boost::detail::variant::over_sequence<tMsgTypeList> > tMsgVariant;
+//typedef boost::variant<boost::detail::variant::over_sequence<tMsgTypeList> > tMsgVariant;
 
 class FirstSecondActor: public TActor<tMsgTypeList>
 {
@@ -39,7 +39,8 @@ public:
    FirstSecondActor(boost::shared_ptr<CBoard> board)
       : TActor(board)
    {
-      board->subscribe(static_cast<THandlerBase<FirstMessage>*>(this));
+      //board->subscribe(static_cast<THandlerBase<boost::shared_ptr<FirstMessage> >*>(this));
+      board->subscribe<boost::shared_ptr<FirstMessage> >(this);
    }
 
 private:
@@ -63,11 +64,20 @@ int main(int, char**)
 
    boost::this_thread::sleep(boost::posix_time::milliseconds(200));
 
+   std::cout << "posting message" << std::endl;
+
    tFirstMessagePtr fm(new FirstMessage);
-   actor->post(fm);
+   boost::shared_ptr<int> intMsg(new int(16));
+   //actor->post(fm);
+   //actor->post(intMsg);
+
+   board->publish(fm);
+   board->publish(intMsg);
+   //board->publish(intMsg);
 
    boost::this_thread::sleep(boost::posix_time::milliseconds(200));
    actor->stop();
+   //boost::this_thread::sleep(boost::posix_time::milliseconds(200));
    //std::cout << actor->mMsgQueue.size() << " messages in queue" << std::endl;
 
    //std::cout << "Size of actor: " << sizeof(FirstSecondActor) << std::endl;

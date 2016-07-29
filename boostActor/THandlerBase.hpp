@@ -10,55 +10,55 @@
 #include <boost/mpl/int.hpp>
 #include <boost/any.hpp>
 
-template <typename T, typename = void>
+struct PostmanBase
+{
+};
+
+template <typename MsgType, typename = void>
 class THandlerBase
 {
-   typedef boost::shared_ptr<T> tPtr;
 public:
-   virtual void operator ()(tPtr msg) = 0;
-   //virtual void on(tPtr) = 0;
-   //void operator ()(T& msg) { on(msg); }
-   //virtual void on(T&) = 0;
-   void post(tPtr msg) { post(boost::any(msg)); }
+   virtual void operator ()(MsgType msg) = 0;
+   void post(MsgType msg) { post(boost::any(msg)); }
 private:
    virtual void post(const boost::any&) = 0;
 };
 
-template <typename T>
+template <typename TypeList>
 class THandlerBase
 <
-   T,
+   TypeList,
    typename boost::enable_if
    <
       boost::mpl::and_
       <
-         boost::mpl::is_sequence<T>,
+         boost::mpl::is_sequence<TypeList>,
          boost::mpl::greater_equal
          <
-            boost::mpl::size<T>,
+            boost::mpl::size<TypeList>,
             boost::mpl::int_<2>
          >
       >
    >::type
->  : public THandlerBase<typename boost::mpl::front<T>::type>
-   , public THandlerBase<typename boost::mpl::pop_front<T>::type>
+>  : public THandlerBase<typename boost::mpl::front<TypeList>::type>
+   , public THandlerBase<typename boost::mpl::pop_front<TypeList>::type>
 {};
 
-template <typename T>
+template <typename TypeList>
 class THandlerBase
 <
-   T,
+   TypeList,
    typename boost::enable_if
    <
       boost::mpl::and_
       <
-         boost::mpl::is_sequence<T>,
+         boost::mpl::is_sequence<TypeList>,
          boost::mpl::equal_to
          <
-            boost::mpl::size<T>,
+            boost::mpl::size<TypeList>,
             boost::mpl::int_<1>
          >
       >
    >::type
->  : public THandlerBase<typename boost::mpl::front<T>::type>
+>  : public THandlerBase<typename boost::mpl::front<TypeList>::type>
 {};
