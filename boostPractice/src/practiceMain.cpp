@@ -8,6 +8,8 @@
 #include <boost/fusion/container/vector.hpp>
 #include <boost/range/algorithm.hpp>
 
+#include "FutureExpectant.hpp"
+
 enum EFutureId
 {
    e_mapData,
@@ -54,51 +56,66 @@ class Visitor
    virtual void visit(FutureHolder& holder) = 0;
 };
 
-struct FutureHolder
+//struct FutureHolder
+//{
+   //virtual void addWaiter(boost::detail::future_waiter& waiter) = 0;
+   //virtual void visitWith(Visitor& visitor) = 0;
+//};
+
+//template <typename FutureType>
+//class VisitorImpl
+//{
+   //virtual void visit(FutureHolder& holder)
+   //{
+      //holder.visitWith(*this);
+   //}
+
+   //virtual void visit(FutureHolderImpl<FutureType>& holder)
+   //{
+      //process(holder.future);
+   //}
+
+   //virtual void process(FutureType& future) = 0;
+//};
+
+//template <typename FutureType>
+//struct FutureHolderImpl: public FutureHolder
+//{
+   //FutureHolderImpl(FutureType f) : future(f) {}
+   //virtual void addWaiter(boost::detail::future_waiter& waiter)
+   //{
+      //waiter.add(future);
+   //}
+
+   //void visitWith(VisitorImpl<FutureType>& visitor)
+   //{
+      //visitor.visit(*this);
+   //}
+
+   //FutureType future;
+//};
+
+//typedef boost::shared_ptr<FutureHolder> tFutureHolderPtr;
+
+//template <typename FutureType>
+//tFutureHolderPtr createHolder(FutureType f)
+//{
+   //return tFutureHolderPtr(new FutureHolderImpl<FutureType>(f));
+//}
+
+void printContent(boost::shared_future<int> fi)
 {
-   virtual void addWaiter(boost::detail::future_waiter& waiter) = 0;
-   virtual void visitWith(Visitor& visitor) = 0;
-};
-
-template <typename FutureType>
-class VisitorImpl
-{
-   virtual void visit(FutureHolder& holder)
+   if (fi.is_ready())
    {
-      holder.visitWith(*this);
+      if (fi.has_value())
+      {
+         std::cout << "Future content: " << fi.get() << std::endl;
+      }
+      else
+      {
+         std::cout << "Future holds exception" << std::endl;
+      }
    }
-
-   virtual void visit(FutureHolderImpl<FutureType>& holder)
-   {
-      process(holder.future);
-   }
-
-   virtual void process(FutureType& future) = 0;
-};
-
-template <typename FutureType>
-struct FutureHolderImpl: public FutureHolder
-{
-   FutureHolderImpl(FutureType f) : future(f) {}
-   virtual void addWaiter(boost::detail::future_waiter& waiter)
-   {
-      waiter.add(future);
-   }
-
-   void visitWith(VisitorImpl<FutureType>& visitor)
-   {
-      visitor.visit(*this);
-   }
-
-   FutureType future;
-};
-
-typedef boost::shared_ptr<FutureHolder> tFutureHolderPtr;
-
-template <typename FutureType>
-tFutureHolderPtr createHolder(FutureType f)
-{
-   return tFutureHolderPtr(new FutureHolderImpl<FutureType>(f));
 }
 
 void useFuture()
@@ -106,63 +123,43 @@ void useFuture()
    boost::shared_future<int> fi = getInt().share();
    std::cout << fi.has_value() << std::endl;
 
-   //boost::shared_future<std::string> fs = getString().share();
    auto fs = getString().share();
 
-   //boost::fusion::vector<boost::future<int>, boost::future<std::string> > futures;
-   //boost::waif_for_any(futures);
    boost::detail::future_waiter w;
 
-   std::vector<tFutureHolderPtr> futures;
-   futures.push_back(createHolder(fi));
-   futures.push_back(createHolder(fs));
-   //w.add(fi);
-   //w.add(fs);
+   //std::vector<tFutureHolderPtr> futures;
+   //futures.push_back(createHolder(fi));
+   //futures.push_back(createHolder(fs));
 
-   //futures.push_back(
-   //futures.emplace_back(fs);
+   //boost::for_each(futures, [&](tFutureHolderPtr& f){ f->addWaiter(w); });
 
-   boost::for_each(futures, [&](tFutureHolderPtr& f){ f->addWaiter(w); });
+   int index = w.wait();
+   std::cout << index << "'th future reacted" << std::endl;
 
-   //futures.push_back(fi);
-   //futures.push_back(fs);
-
-   //boost::wait_for_any(fi, fs);
-   //while (true)
+   //if (fi.has_value() && fi.is_ready())
    //{
-      int index = w.wait();
-      std::cout << index << "'th future reacted" << std::endl;
-
-      if (fi.has_value() && fi.is_ready())
-      {
-         std::cout << fi.get() << std::endl;
-      }
-      if (fs.has_value() && fs.is_ready())
-      {
-         std::cout << fs.get() << std::endl;
-         std::cout << fs.is_ready() << " " << fs.has_value() << std::endl;
-         std::cout << fs.get() << std::endl;
-      }
+      //std::cout << fi.get() << std::endl;
+   //}
+   //if (fs.has_value() && fs.is_ready())
+   //{
+      //std::cout << fs.get() << std::endl;
+      //std::cout << fs.is_ready() << " " << fs.has_value() << std::endl;
+      //std::cout << fs.get() << std::endl;
    //}
 
-   //std::string prefix = " value = ";
-   struct Printer
-   {
-      Printer(const std::string& p) : prefix(p) {}
-      void operator ()(int i)
-      {
-         std::cout << prefix << i;
-      }
-      std::string prefix;
-   };
-   std::vector<int> ints = {1, 2, 3, 4, 56};
-   boost::for_each(ints, Printer(" value = "));
+}
+
+void useFutureExpectant()
+{
+   auto expectant = createExpectant<int>(&printContent);
+   std::cout << "expectant created" << std::endl;
+   expectant->addFuture(getInt().share());
+   std::cout << "future added" << std::endl;
+
+   boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+   delete expectant;
 
    std::cout << "that's all" << std::endl;
-   //std::cout << fi.get() << " " << fs.get() << std::endl;
-   //std::cout << f.get() << std::endl;
-   //fi.wait();
-   //std::cout << fi.get() << std::endl;
 }
 
 struct DataProcessor
@@ -221,8 +218,8 @@ void useChrono()
 
 int main(int, char**)
 {
-   //useFuture();
-   useDataProcessor();
+   useFutureExpectant();
+   //useDataProcessor();
 
    return 0;
 }

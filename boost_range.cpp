@@ -1,5 +1,6 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/range/irange.hpp>
+#include <boost/shared_ptr.hpp>
 #include <iostream>
 
 struct Type1{};
@@ -41,11 +42,17 @@ struct Converter
    }
 };
 
+struct A {};
+
+struct B : public A {};
 
 int main(int, char**)
 {
    boost::copy(boost::irange(0, 10), std::ostream_iterator<int>(std::cout, ", "));
    std::cout << std::endl;
+
+   boost::shared_ptr<B> pb(new B());
+   boost::shared_ptr<A> pa = pb;
 
    return 0;
 }

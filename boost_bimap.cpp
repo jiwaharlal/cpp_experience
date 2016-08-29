@@ -5,28 +5,37 @@
 #include <string>
 #include <boost/lambda/lambda.hpp>
 #include <typeinfo>
+#include <utility>
+#include <boost/range/algorithm.hpp>
+#include <boost/range/algorithm/transform.hpp>
+#include <boost/lambda/lambda.hpp>
+#include <boost/bind.hpp>
 
 typedef boost::bimap<int, std::string> tIntStringMap;
-
-template <typename FirstType, typename SecondType>
-std::ostream& operator <<(std::ostream& out, typename boost::bimap<FirstType, SecondType>::const_reference p)
-{
-   //out << "<" << p.first << ", " << p.second;
-   return out;
-}
-
-//template <typename FirstType, typename SecondType>
-//std::ostream& operator <<(std::ostream& out, typename boost::bimap<FirstType, SecondType>::left_map::const_reference p)
-//{
-   //out << "<" << p.first << ", " << p.second << ">";
-   //return out;
-//}
 
 template <typename FirstType, typename SecondType>
 void printTypes(const boost::bimap<FirstType, SecondType>& bm)
 {
    std::cout << "First: " << typeid(bm.left).name() << std::endl;
 }
+
+template <class T1>
+struct getFirst
+{
+   template <typename PairType>
+   const T1& operator ()(const PairType& p)
+   {
+      return p.first;
+   }
+};
+
+struct getSecond
+{
+   std::string operator ()(tIntStringMap::left_const_reference p)
+   {
+      return p.second;
+   }
+};
 
 int main(int, char**)
 {
@@ -36,6 +45,18 @@ int main(int, char**)
    numberMap.insert(tIntStringMap::value_type(2, "two"));
    numberMap.insert(tIntStringMap::value_type(3, "three"));
 
+   std::vector<int> v;
+
+   //boost::transform(numberMap.left, std::back_inserter(v), [](tIntStringMap::left_const_reference v) {return v.first;});
+   boost::transform(numberMap.left, std::ostream_iterator<int>(std::cout, ", "), getFirst<int>());
+   std::cout << std::endl;
+   boost::transform(numberMap.left, std::ostream_iterator<std::string>(std::cout, ", "), getSecond());
+   std::cout << std::endl;
+
+   //tIntStringMap::
+   //tIntStringMap::left_iterator it = numberMap.begin();
+   //numberMap
+
    std::cout << typeid(tIntStringMap::value_type).name() << std::endl;
 
    tIntStringMap::left_map& intToStr = numberMap.left;
@@ -44,23 +65,6 @@ int main(int, char**)
    numberMap.left.erase(2);
    numberMap.right.erase("two");
    strToInt.erase("three");
-
-   std::cout << "map size: " << numberMap.size() << std::endl;
-
-   //std::copy(numberMap.begin(), numberMap.end(), std::ostream_iterator<tIntStringMap::const_reference>(std::cout, "\n"));
-   //std::for_each(numberMap.begin(), numberMap.end(), std::cout << boost::lambda::_1);
-   for (tIntStringMap::const_iterator it = numberMap.begin(); it != numberMap.end(); ++it)
-   {
-      //std::cout << *it << std::endl;
-   }
-
-   //tIntStringMap::left_map::const_reference el = *(intToStr.begin());
-   for (auto el: numberMap)
-   {
-      std::cout << el.first;
-   }
-
-   std::cout << typeid(tIntStringMap::left_map).name() << std::cout;
 
    printTypes(numberMap);
 
