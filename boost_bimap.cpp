@@ -6,6 +6,8 @@
 #include <boost/lambda/lambda.hpp>
 #include <typeinfo>
 #include <utility>
+#include <boost/range/adaptors.hpp>
+#include <boost/algorithm/string/join.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm/transform.hpp>
 #include <boost/lambda/lambda.hpp>
@@ -47,26 +49,8 @@ int main(int, char**)
 
    std::vector<int> v;
 
-   //boost::transform(numberMap.left, std::back_inserter(v), [](tIntStringMap::left_const_reference v) {return v.first;});
-   boost::transform(numberMap.left, std::ostream_iterator<int>(std::cout, ", "), getFirst<int>());
-   std::cout << std::endl;
-   boost::transform(numberMap.left, std::ostream_iterator<std::string>(std::cout, ", "), getSecond());
-   std::cout << std::endl;
-
-   //tIntStringMap::
-   //tIntStringMap::left_iterator it = numberMap.begin();
-   //numberMap
-
-   std::cout << typeid(tIntStringMap::value_type).name() << std::endl;
-
-   tIntStringMap::left_map& intToStr = numberMap.left;
-   tIntStringMap::right_map& strToInt = numberMap.right;
-
-   numberMap.left.erase(2);
-   numberMap.right.erase("two");
-   strToInt.erase("three");
-
-   printTypes(numberMap);
+   std::string optionsStr = boost::algorithm::join(boost::adaptors::values(numberMap.left), ", ");
+   std::cout << optionsStr << std::endl;
 
    return 0;
 }

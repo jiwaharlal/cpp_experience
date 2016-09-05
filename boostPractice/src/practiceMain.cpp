@@ -1,12 +1,16 @@
 #define BOOST_THREAD_PROVIDES_FUTURE
 #include <iostream>
 #include <boost/chrono.hpp>
+#include <boost/exception_ptr.hpp>
+#include <boost/make_shared.hpp>
 #include <boost/thread/future.hpp>
 #include <typeinfo>
 #include <boost/fusion/sequence.hpp>
 #include <boost/fusion/include/sequence.hpp>
 #include <boost/fusion/container/vector.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/lexical_cast.hpp>
+#include <stdexcept>
 
 #include "FutureExpectant.hpp"
 
@@ -32,6 +36,11 @@ boost::future<int> getInt()
    });
 
    return pi->get_future();
+}
+
+boost::future<int> getInt2()
+{
+   return boost::make_future(356);
 }
 
 boost::future<std::string> getString()
@@ -111,6 +120,11 @@ void printContent(boost::shared_future<int> fi)
       {
          std::cout << "Future content: " << fi.get() << std::endl;
       }
+      else if (fi.has_exception())
+      {
+         std::cout << "Exception occured" << std::endl;
+         std::cout << fi.get_exception_ptr() << std::endl;
+      }
       else
       {
          std::cout << "Future holds exception" << std::endl;
@@ -127,55 +141,52 @@ void useFuture()
 
    boost::detail::future_waiter w;
 
-   //std::vector<tFutureHolderPtr> futures;
-   //futures.push_back(createHolder(fi));
-   //futures.push_back(createHolder(fs));
-
-   //boost::for_each(futures, [&](tFutureHolderPtr& f){ f->addWaiter(w); });
-
    int index = w.wait();
    std::cout << index << "'th future reacted" << std::endl;
-
-   //if (fi.has_value() && fi.is_ready())
-   //{
-      //std::cout << fi.get() << std::endl;
-   //}
-   //if (fs.has_value() && fs.is_ready())
-   //{
-      //std::cout << fs.get() << std::endl;
-      //std::cout << fs.is_ready() << " " << fs.has_value() << std::endl;
-      //std::cout << fs.get() << std::endl;
-   //}
-
 }
 
 void useFutureExpectant()
 {
-   auto expectant = createExpectant<int>(&printContent);
+   auto expectant = boost::make_shared<FutureExpectant<boost::shared_future<int> > >(&printContent);
+   //FutureExpectant<boost::shared_future<int> > expectant(&printContent);
    std::cout << "expectant created" << std::endl;
-   expectant->addFuture(getInt().share());
+
+   //boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+   expectant->addFuture(getInt2().share());
+   //expectant->addFuture(getInt().share());
+   //expectant->addFuture(getInt().share());
+   //expectant->addFuture(getInt().share());
+   //expectant->addFuture(getInt().share());
+   //expectant->addFuture(getInt().share());
    std::cout << "future added" << std::endl;
 
    boost::this_thread::sleep(boost::posix_time::milliseconds(500));
-   delete expectant;
+   //delete expectant;
+   expectant.reset();
 
    std::cout << "that's all" << std::endl;
 }
 
 struct DataProcessor
 {
+   DataProcessor()
+      : mPromise(new boost::promise<int>())
+   {}
+
    boost::future<int> processData(int value)
    {
-      if (mPromise)
-      {
-         //mPromise->set_value(0);
-         mPromise->set_exception(std::exception());
-      }
-      mPromise.reset(new boost::promise<int>());
       boost::thread([=]()
       {
-         boost::this_thread::sleep(boost::posix_time::milliseconds(400));
-         mPromise->set_value(value * 2);
+         boost::this_thread::sleep(boost::posix_time::milliseconds(2000));
+         //mPromise->set_value(value * 2);
+         try
+         {
+            throw std::invalid_argument(boost::lexical_cast<std::string>(value) + " is very invalid");
+         }
+         catch (const std::exception& e)
+         {
+            mPromise->set_exception(boost::current_exception());
+         }
       });
       return mPromise->get_future();
    }
@@ -187,11 +198,24 @@ void useDataProcessor()
    DataProcessor dp;
    auto f1 = dp.processData(34).share();
 
-   boost::this_thread::sleep(boost::posix_time::milliseconds(200));
+   //boost::this_thread::sleep(boost::posix_time::milliseconds(400));
 
-   auto f2 = dp.processData(34).share();
+   //boost::detail::set_wait_callback(f1, );
+   f1.wait();
 
-   std::cout << f1.get() << " " << f2.get() << std::endl;
+   //auto f2 = dp.processData(34).share();
+
+   if (f1.is_ready())
+   {
+      try
+      {
+         std::cout << f1.get() << std::endl;
+      }
+      catch (const std::exception& e)
+      {
+         std::cout << "Exception occured " << e.what() << std::endl;
+      }
+   }
 }
 
 void useChrono()
@@ -216,10 +240,31 @@ void useChrono()
    std::cout << minus << std::endl;
 }
 
+void intCallback(boost::promise<int>& i)
+{
+   std::cout << __FUNCTION__ << " " << i.get_future().get() << std::endl;
+}
+
+void getIntWithCallback()
+{
+   boost::promise<int> pi;
+   pi.set_wait_callback(&intCallback);
+
+   boost::this_thread::sleep(boost::posix_time::milliseconds(400));
+   pi.set_value(10);
+   boost::this_thread::sleep(boost::posix_time::milliseconds(400));
+}
+
+void useWaitCallback()
+{
+   getIntWithCallback();
+}
+
 int main(int, char**)
 {
    useFutureExpectant();
    //useDataProcessor();
+   //useWaitCallback();
 
    return 0;
 }
