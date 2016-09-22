@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.8)
 
 set (EXECUTABLE_NAME boostPractice)
 
-add_definitions(-std=c++11)
+#add_definitions(-std=c++11)
 
 include_directories( "${CMAKE_CURRENT_SOURCE_DIR}" )
 

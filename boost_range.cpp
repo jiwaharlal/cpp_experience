@@ -1,7 +1,9 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/range/irange.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/next_prior.hpp>
 #include <iostream>
+#include <list>
 
 struct Type1{};
 struct Type2{};
@@ -53,6 +55,21 @@ int main(int, char**)
 
    boost::shared_ptr<B> pb(new B());
    boost::shared_ptr<A> pa = pb;
+
+   typedef std::list<int> tIntList;
+   tIntList ints;
+   boost::copy(boost::irange(0, 10), std::back_inserter(ints));
+   for (tIntList::iterator it = ints.begin(); it != ints.end(); ++it)
+   {
+      if (*it % 2 == 0)
+      {
+         //--it;
+         //ints.erase(boost::next(it));
+         ints.erase(it--);
+      }
+   }
+   boost::copy(ints, std::ostream_iterator<int>(std::cout, ", "));
+   std::cout << std::endl;
 
    return 0;
 }
