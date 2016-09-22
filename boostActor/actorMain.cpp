@@ -11,6 +11,8 @@
 #include <boost/mpl/equal_to.hpp>
 #include <boost/mpl/front.hpp>
 #include <boost/mpl/pop_front.hpp>
+#include <boost/mpl/back_inserter.hpp>
+#include <boost/mpl/copy.hpp>
 #include <iostream>
 #include <boost/any.hpp>
 #include <map>
@@ -30,37 +32,58 @@ typedef boost::shared_ptr<SecondMessage> tSecondMessagePtr;
 
 struct ThirdMessage{};
 
-typedef boost::mpl::list<FirstMessage, SecondMessage> tMsgTypeList;
+typedef boost::mpl::list<FirstMessage, SecondMessage> tPublicMsgTypeList;
+
+typedef boost::mpl::list<std::string> tPrivateMsgTypeList;
+
+typedef boost::mpl::copy
+<
+   tPublicMsgTypeList,
+   boost::mpl::back_inserter
+   <
+      boost::mpl::copy
+      <
+         tPrivateMsgTypeList,
+         boost::mpl::back_inserter<boost::mpl::vector<> >
+      >::type
+   >
+>::type tMsgTypeList;
+
 //typedef boost::variant<boost::detail::variant::over_sequence<tMsgTypeList> > tMsgVariant;
 
 class FirstSecondActor: public TActor<tMsgTypeList>
 {
 public:
-   FirstSecondActor(boost::shared_ptr<CBoard> board)
+   FirstSecondActor(CBoard* board)
       : TActor(board)
    {
       //board->subscribe(static_cast<THandlerBase<boost::shared_ptr<FirstMessage> >*>(this));
-      board->subscribe<boost::shared_ptr<FirstMessage> >(this);
+      board->subscribe<FirstMessage>(this);
    }
 
 private:
-   virtual void operator ()(boost::shared_ptr<FirstMessage>)
+   virtual void operator ()(FirstMessage)
    {
       std::cout << "First message handled" << std::endl;
    }
 
-   virtual void operator ()(boost::shared_ptr<SecondMessage>)
+   virtual void operator ()(SecondMessage)
    {
       std::cout << "SecondMessage handled" << std::endl;
+   }
+
+   virtual void operator ()(std::string)
+   {
+      std::cout << "std::string handled" << std::endl;
    }
 };
 
 int main(int, char**)
 {
    boost::shared_ptr<CBoard> board(new CBoard);
-   boost::shared_ptr<FirstSecondActor> actor(new FirstSecondActor(board));
+   boost::shared_ptr<FirstSecondActor> actor(new FirstSecondActor(board.get()));
 
-   actor->run();
+   actor->start();
 
    boost::this_thread::sleep(boost::posix_time::milliseconds(200));
 
@@ -71,7 +94,7 @@ int main(int, char**)
    //actor->post(fm);
    //actor->post(intMsg);
 
-   board->publish(fm);
+   board->publish(*fm);
    board->publish(intMsg);
    //board->publish(intMsg);
 

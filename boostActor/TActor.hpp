@@ -1,128 +1,165 @@
+/**
+ * Project        CVNAR
+ * Copyright (C)  2010-2016
+ * Company        Luxoft
+ *                All rights reserved
+ * Secrecy Level  STRICTLY CONFIDENTIAL
+ *
+ * @file     TActor.hpp
+ * @author   Maxim Bondarenko
+ * @date     29.07.2016
+ */
+
 #pragma once
 
 #include <boost/atomic.hpp>
+#include <boost/container/deque.hpp>
 #include <boost/mpl/for_each.hpp>
+#include <boost/mpl/placeholders.hpp>
+#include <boost/noncopyable.hpp>
 #include <boost/thread.hpp>
+#include <boost/thread/lock_guard.hpp>
+#include <boost/thread/locks.hpp>
+#include <boost/thread/mutex.hpp>
 #include <boost/variant.hpp>
 #include <boost/variant/apply_visitor.hpp>
 #include <queue>
 
 #include "THandlerBase.hpp"
 #include "TVariant.hpp"
+#include "CBoard.hpp"
+#include "Wrap.hpp"
+//#include "navigation/utils/ForEach.hpp"
 
 class CBoard;
 
-template <typename T>
-struct add_shared_ptr
+template <typename MsgTypeList>
+class TActor : boost::noncopyable
+               , public THandlerBase<MsgTypeList>
 {
-   typedef boost::shared_ptr<T> type;
-};
+public: // types
+   typedef TVariant<MsgTypeList> tMsgVariant;
 
-template <typename TypeList>
-struct wrap_list_with_ptr
-{
-   typedef typename boost::mpl::transform<TypeList, add_shared_ptr<boost::mpl::_1> >::type type;
-};
+public: // methods
+   TActor(CBoard* board);
 
-template <typename TypeList>
-struct shared_ptr_variant
-{
-   typedef TVariant<typename wrap_list_with_ptr<TypeList>::type> type;
+   void start();
+
+   void stop();
+
+   virtual void post(const boost::any& anyMsg);
+
+   CBoard* board() const;
+
+private: // types
+   typedef std::queue<tMsgVariant, boost::container::deque<tMsgVariant> > tMsgQueue;
+   struct MsgPusher;
+
+private: // methods
+   void threadFunction();
+
+private: // fields
+   tMsgQueue mMsgQueue;
+   boost::mutex mMsgsMutex;
+   boost::atomic<bool> mIsStop;
+   boost::thread mThread;
+   boost::condition_variable mCondition;
+
+protected: // fields
+   CBoard* mBoard;
 };
 
 template <typename MsgTypeList>
-class TActor : public THandlerBase<typename wrap_list_with_ptr<MsgTypeList>::type>
+struct TActor<MsgTypeList>::MsgPusher
 {
-   typedef typename wrap_list_with_ptr<MsgTypeList>::type MsgPtrList;
-   typedef typename shared_ptr_variant<MsgTypeList>::type tMsgVariant;
+   MsgPusher(tMsgQueue& msgQueue, const boost::any& anyMsg)
+      : mMsgQueue(msgQueue)
+      , mAnyMsg(anyMsg)
+   {}
 
-public:
-   typedef void result_type;
-
-public:
-   TActor(boost::shared_ptr<CBoard> board) : mBoard(board) {}
-
-   void run()
+   template <typename MsgType>
+   void operator ()()
    {
-      mIsStop = false;
-      mThread = boost::thread(boost::bind(&TActor::threadFunction, this));
-   }
-
-   void stop()
-   {
-      mIsStop = true;
-      mCondition.notify_one();
-      mThread.join();
-   }
-
-   //virtual void post(const tMsgVariant& msg)
-   virtual void post(const boost::any& anyMsg)
-   {
-      boost::mpl::for_each<MsgPtrList>(MsgPusher(mMsgQueue, anyMsg));
-      mCondition.notify_one();
-      //mMsgQueue.push(msg);
-   }
-
-private:
-   //typedef typename boost::make_variant_over<MsgTypeList>::type tMsgVariant;
-   typedef std::queue<tMsgVariant> tMsgQueue;
-
-   struct MsgPusher
-   {
-      MsgPusher(tMsgQueue& msgQueue, const boost::any& anyMsg)
-         : mMsgQueue(msgQueue)
-         , mAnyMsg(anyMsg)
-      {};
-
-      template <typename MsgType>
-      void operator ()(MsgType&)
+      if (mAnyMsg.type() == typeid(MsgType))
       {
-         if (mAnyMsg.type() == typeid(MsgType))
-         {
-            std::cout << "pushing message to queue" << std::endl;
-            mMsgQueue.push(tMsgVariant(boost::any_cast<MsgType>(mAnyMsg)));
-         }
+         mMsgQueue.push(tMsgVariant(boost::any_cast<MsgType>(mAnyMsg)));
       }
+   }
 
-      tMsgQueue& mMsgQueue;
-      const boost::any& mAnyMsg;
-   };
+   tMsgQueue& mMsgQueue;
+   const boost::any& mAnyMsg;
+};
 
-private:
-   void threadFunction()
+template <typename MsgTypeList>
+TActor<MsgTypeList>::TActor(CBoard* board)
+   : mBoard(board)
+{
+   //board->subscribeList<MsgTypeList>(this);
+}
+
+template <typename MsgTypeList>
+void TActor<MsgTypeList>::start()
+{
+   mIsStop = false;
+   mThread = boost::thread(boost::bind(&TActor::threadFunction, this));
+}
+
+template <typename MsgTypeList>
+void TActor<MsgTypeList>::stop()
+{
+   static const boost::chrono::seconds sJoinDuration(1);
+
+   mIsStop = true;
+   mCondition.notify_one();
+   if (!mThread.try_join_for(sJoinDuration))
    {
-      while (true)
+      mThread.interrupt();
+   }
+}
+
+template <typename MsgTypeList>
+void TActor<MsgTypeList>::post(const boost::any& anyMsg)
+{
+   {
+      boost::lock_guard<boost::mutex> lk(mMsgsMutex);
+      //forEach<MsgTypeList>(MsgPusher(mMsgQueue, anyMsg));
+      boost::mpl::for_each<MsgTypeList, Wrap<boost::mpl::placeholders::_1> >(FunctorWrapper<MsgPusher>(mMsgQueue, anyMsg));
+   }
+   mCondition.notify_one();
+}
+
+template <typename MsgTypeList>
+CBoard* TActor<MsgTypeList>::board() const
+{
+   return mBoard;
+}
+
+template <typename MsgTypeList>
+void TActor<MsgTypeList>::threadFunction()
+{
+   while (!mIsStop)
+   {
       {
          boost::mutex m;
          boost::unique_lock<boost::mutex> lk(m);
 
-         std::cout << "waiting" << std::endl;
          mCondition.wait(lk);
-         std::cout << "notified" << std::endl;
+      }
 
-         if (mIsStop)
-         {
-            std::cout << "stopping" << std::endl;
-            break;
-         }
+      if (mIsStop)
+      {
+         break;
+      }
 
-         while (!mMsgQueue.empty())
-         {
-            std::cout << "extracting message from queue" << std::endl;
-            tMsgVariant msg = mMsgQueue.front();
-            mMsgQueue.pop();
-            //boost::apply_visitor(*this, msg);
-            msg.apply(*this);
-         }
+      typedef boost::unique_lock<boost::mutex> tLock;
+      tLock lk;
+      while ((lk = tLock(mMsgsMutex)).owns_lock() && !mMsgQueue.empty() && !mIsStop)
+      {
+         tMsgVariant msg = mMsgQueue.front();
+         mMsgQueue.pop();
+         lk.release()->unlock();
+
+         msg.apply(*this);
       }
    }
-
-private:
-   tMsgQueue mMsgQueue;
-   boost::atomic<bool> mIsStop;
-   boost::thread mThread;
-   boost::condition_variable mCondition;
-protected:
-   boost::shared_ptr<CBoard> mBoard;
-};
-
+}
