@@ -1,22 +1,40 @@
-template <class T>
-struct Wrap{};
+#pragma once
 
-template <typename FunctorType>
-struct FunctorWrapper: public FunctorType
+#include <boost/mpl/for_each.hpp>
+#include <boost/mpl/placeholders.hpp>
+
+// declaration
+
+template <typename TypeList, typename FunctorType>
+void forEach(FunctorType functor);
+
+// implementation
+
+namespace NNaviUtilsPrivate
 {
-   template <typename T1>
-   FunctorWrapper(T1 t1)
-      : FunctorType(t1)
-   {}
+   template <class T>
+   struct Wrap{};
 
-   template <typename T1, typename T2>
-   FunctorWrapper(T1 t1, T2 t2)
-      : FunctorType(t1, t2)
-   {}
-
-   template <typename T>
-   void operator ()(Wrap<T>&)
+   template <typename FunctorType>
+   struct FunctorWrapper
    {
-      FunctorType::template operator ()<T>();
-   }
-};
+      FunctorWrapper(const FunctorType& functor)
+         : mFunctor(functor)
+      {}
+
+      template <typename T>
+      void operator ()(Wrap<T>&)
+      {
+         mFunctor.template operator()<T>();
+      }
+
+      FunctorType mFunctor;
+   };
+} // NNaviUtilsPrivate
+
+template <typename TypeList, typename FunctorType>
+void forEach(FunctorType functor)
+{
+   using namespace NNaviUtilsPrivate;
+   boost::mpl::for_each<TypeList, Wrap<boost::mpl::placeholders::_1> >(FunctorWrapper<FunctorType>(functor));
+}

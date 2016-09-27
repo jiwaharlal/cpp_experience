@@ -13,6 +13,8 @@
 #pragma once
 
 #include <boost/foreach.hpp>
+#include <boost/mpl/for_each.hpp>
+#include <boost/mpl/placeholders.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/lock_guard.hpp>
@@ -25,6 +27,7 @@
 
 //#include "framework/logger/Log.hpp"
 #include "THandlerBase.hpp"
+#include "Wrap.hpp"
 //#include "navigation/utils/ForEach.hpp"
 
 struct HandlerListBase {};
@@ -35,23 +38,64 @@ public: // methods
    template <typename MessageType>
    void subscribe(THandler<MessageType>* handler);
 
-   //template <typename MessageTypeList, typename HandlerType>
-   //void subscribeList(HandlerType* handler);
-
    template <typename MessageType>
-   void unsubscribe(THandler<MessageType>& handler);
+   void unsubscribe(THandler<MessageType>* handler);
+
+   template <typename MessageTypeList, typename HandlerType>
+   void subscribeList(HandlerType* handler);
+
+   template <typename MessageTypeList, typename HandlerType>
+   void unsubscribeList(HandlerType* handler);
 
    template <typename MessageType>
    void publish(MessageType message);
 
 private: // types
    typedef std::map<boost::typeindex::type_index, boost::shared_ptr<HandlerListBase> > tHandlerMap;
-   template <typename HandlerType> struct Subscriber;
 
 private: // fields
    tHandlerMap mHandlerMap;
    boost::mutex mHandlersMutex;
 };
+
+namespace NBoardPrivate
+{
+   template <typename HandlerType>
+   struct Subscriber
+   {
+      Subscriber(HandlerType* handler, CBoard* board)
+         : mHandler(handler)
+         , mBoard(board)
+      {}
+
+      template <typename MsgType>
+      void operator ()()
+      {
+         mBoard->subscribe<MsgType>(static_cast<THandler<MsgType>*>(mHandler));
+      }
+
+      HandlerType* mHandler;
+      CBoard* mBoard;
+   };
+
+   template <typename HandlerType>
+   struct Unsubscriber
+   {
+      Unsubscriber(HandlerType* handler, CBoard* board)
+         : mHandler(handler)
+         , mBoard(board)
+      {}
+
+      template <typename MsgType>
+      void operator ()()
+      {
+         mBoard->unsubscribe<MsgType>(static_cast<THandler<MsgType>*>(mHandler));
+      }
+
+      HandlerType* mHandler;
+      CBoard* mBoard;
+   };
+} // NBoardPrivate
 
 template <typename MessageType>
 struct THandlerList: public HandlerListBase
@@ -78,38 +122,8 @@ void CBoard::subscribe(THandler<MessageType>* handler)
    handlers.insert(handler);
 }
 
-//template <typename HandlerType>
-//struct CBoard::Subscriber
-//{
-   //Subscriber(HandlerType* handler, CBoard* board)
-      //: mHandler(handler)
-      //, mBoard(board)
-   //{}
-
-   //template <typename T>
-   //void oprator ()(Wrap<T>&)
-   //{
-      //operator ()<T>();
-   //}
-
-   //template <typename MsgType>
-   //void operator ()()
-   //{
-      //mBoard->subscribe<MsgType>(static_cast<THandler<MsgType>*>(mHandler));
-   //}
-
-   //HandlerType* mHandler;
-   //CBoard* mBoard;
-//};
-
-//template <typename MessageTypeList, typename HandlerType>
-//void CBoard::subscribeList(HandlerType* handler)
-//{
-   //forEach<MessageTypeList>(Subscriber<HandlerType>(handler, this));
-//}
-
 template <typename MessageType>
-void CBoard::unsubscribe(THandler<MessageType>& handler)
+void CBoard::unsubscribe(THandler<MessageType>* handler)
 {
    typedef typename THandlerList<MessageType>::tHandlerSet tHandlerSet;
 
@@ -121,8 +135,22 @@ void CBoard::unsubscribe(THandler<MessageType>& handler)
       return;
    }
 
-   tHandlerSet& handlers = static_cast<THandlerList<MessageType>* >(it->second)->mHandlers;
-   handlers->erase(handler);
+   tHandlerSet& handlers = static_cast<THandlerList<MessageType>* >(it->second.get())->mHandlers;
+   handlers.erase(handler);
+}
+
+template <typename MessageTypeList, typename HandlerType>
+void CBoard::subscribeList(HandlerType* handler)
+{
+   using NBoardPrivate::Subscriber;
+   forEach<MessageTypeList>(Subscriber<HandlerType>(handler, this));
+}
+
+template <typename MessageTypeList, typename HandlerType>
+void CBoard::unsubscribeList(HandlerType* handler)
+{
+   using NBoardPrivate::Unsubscriber;
+   forEach<MessageTypeList>(Unsubscriber<HandlerType>(handler, this));
 }
 
 template <typename MessageType>

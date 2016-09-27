@@ -36,9 +36,9 @@ struct TVariantImpl: public TVariantBase<TypeList>
       return mValue;
    }
 
-   void apply(THandlerBase<TypeList>& v)
+   void apply(THandlerBase<TypeList>& handler)
    {
-      static_cast<THandler<T>& >(v)(mValue);
+      static_cast<THandler<T>& >(handler)(mValue);
    }
 
    T mValue;
@@ -59,9 +59,9 @@ public:
       mHolder.reset(new TVariantImpl<T, TypeList>(value));
    }
 
-   void apply(THandlerBase<TypeList>& v)
+   void apply(THandlerBase<TypeList>& handler)
    {
-      mHolder->apply(v);
+      mHolder->apply(handler);
    }
 
 public:

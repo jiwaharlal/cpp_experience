@@ -51,14 +51,14 @@ typedef boost::mpl::copy
 
 //typedef boost::variant<boost::detail::variant::over_sequence<tMsgTypeList> > tMsgVariant;
 
-class FirstSecondActor: public TActor<tMsgTypeList>
+class FirstSecondActor: public TActor<tPublicMsgTypeList, tPrivateMsgTypeList>
 {
 public:
    FirstSecondActor(CBoard* board)
       : TActor(board)
    {
       //board->subscribe(static_cast<THandlerBase<boost::shared_ptr<FirstMessage> >*>(this));
-      board->subscribe<FirstMessage>(this);
+      //board->subscribe<FirstMessage>(this);
    }
 
 private:
@@ -95,7 +95,10 @@ int main(int, char**)
    //actor->post(intMsg);
 
    board->publish(*fm);
-   board->publish(intMsg);
+   board->publish(*intMsg);
+   board->publish(std::string("hello"));
+
+   actor->post(std::string("hello"));
    //board->publish(intMsg);
 
    boost::this_thread::sleep(boost::posix_time::milliseconds(200));
