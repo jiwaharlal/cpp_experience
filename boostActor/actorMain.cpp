@@ -51,6 +51,11 @@ typedef boost::mpl::copy
 
 //typedef boost::variant<boost::detail::variant::over_sequence<tMsgTypeList> > tMsgVariant;
 
+class BadException: public std::exception
+{
+   virtual const char* what() const _GLIBCXX_USE_NOEXCEPT { return "Bad exception"; }
+};
+
 class FirstSecondActor: public TActor<tPublicMsgTypeList, tPrivateMsgTypeList>
 {
 public:
@@ -70,6 +75,8 @@ private:
    virtual void operator ()(SecondMessage)
    {
       std::cout << "SecondMessage handled" << std::endl;
+      //throw boost::bad_function_call();
+      throw BadException();
    }
 
    virtual void operator ()(std::string)
@@ -79,11 +86,12 @@ private:
 };
 
 int main(int, char**)
+try
 {
    boost::shared_ptr<CBoard> board(new CBoard);
    boost::shared_ptr<FirstSecondActor> actor(new FirstSecondActor(board.get()));
 
-   actor->start();
+   boost::shared_future<std::string> actorTerminationFuture = actor->start();
 
    boost::this_thread::sleep(boost::posix_time::milliseconds(200));
 
@@ -97,16 +105,38 @@ int main(int, char**)
    board->publish(*fm);
    board->publish(*intMsg);
    board->publish(std::string("hello"));
+   board->publish(SecondMessage());
 
    actor->post(std::string("hello"));
    //board->publish(intMsg);
 
    boost::this_thread::sleep(boost::posix_time::milliseconds(200));
    actor->stop();
+
+   boost::shared_future<std::string>* futureIt = boost::wait_for_any(&actorTerminationFuture, &actorTerminationFuture);
+   //if (futureIt->has_value())
+   //{
+      std::cout << "Actor terminated with message : " << futureIt->get() << std::endl;
+   //}
+   //else
+   //{
+      //std::cout << "Actor terminated with exception : " << futureIt->get_exception_ptr() << std::endl;
+   //}
+
    //boost::this_thread::sleep(boost::posix_time::milliseconds(200));
    //std::cout << actor->mMsgQueue.size() << " messages in queue" << std::endl;
 
    //std::cout << "Size of actor: " << sizeof(FirstSecondActor) << std::endl;
 
    return 0;
+}
+catch (const std::exception& e)
+{
+   std::cout << "Program terminated with exception : " << e.what() << std::endl;
+   return 1;
+}
+catch (...)
+{
+   std::cout << "Program terminated with unknown exception" << std::endl;
+   return 1;
 }

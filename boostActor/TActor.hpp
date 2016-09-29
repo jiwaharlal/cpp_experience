@@ -59,7 +59,7 @@ public: // methods
 
    ~TActor();
 
-   void start();
+   boost::shared_future<std::string> start();
 
    void stop();
 
@@ -95,6 +95,7 @@ private: // fields
    boost::atomic<bool> mIsStop;
    boost::thread mThread;
    boost::condition_variable mCondition;
+   boost::promise<std::string> mTerminationPromise;
 
 protected: // fields
    CBoard* mBoard;
@@ -125,20 +126,21 @@ template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
 TActor<PublicMsgTypeList, PrivateMsgTypeList>::TActor(CBoard* board)
    : mBoard(board)
 {
-   board->subscribeList<PublicMsgTypeList>(this);
 }
 
 template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
 TActor<PublicMsgTypeList, PrivateMsgTypeList>::~TActor()
 {
-   mBoard->unsubscribeList<MsgTypeList>(this);
 }
 
 template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
-void TActor<PublicMsgTypeList, PrivateMsgTypeList>::start()
+boost::shared_future<std::string> TActor<PublicMsgTypeList, PrivateMsgTypeList>::start()
 {
    mIsStop = false;
+   boost::shared_future<std::string> terminationFuture = mTerminationPromise.get_future().share();
    mThread = boost::thread(boost::bind(&TActor::threadFunction, this));
+
+   return terminationFuture;
 }
 
 template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
@@ -151,6 +153,7 @@ void TActor<PublicMsgTypeList, PrivateMsgTypeList>::stop()
    if (!mThread.try_join_for(sJoinDuration))
    {
       mThread.interrupt();
+      mTerminationPromise.set_value("Thread interrupted");
    }
 }
 
@@ -174,7 +177,10 @@ CBoard* TActor<PublicMsgTypeList, PrivateMsgTypeList>::board() const
 
 template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
 void TActor<PublicMsgTypeList, PrivateMsgTypeList>::threadFunction()
+try
 {
+   mBoard->subscribeList<PublicMsgTypeList>(this);
+
    while (!mIsStop)
    {
       {
@@ -200,4 +206,18 @@ void TActor<PublicMsgTypeList, PrivateMsgTypeList>::threadFunction()
          msg.apply(*this);
       }
    }
+
+   mBoard->unsubscribeList<MsgTypeList>(this);
+
+   mTerminationPromise.set_value("Correct completion");
+}
+catch (const std::exception& e)
+{
+   std::cout << "Error in " << __FUNCTION__ << " : " << e.what() << std::endl;
+   mTerminationPromise.set_exception(e);
+}
+catch (...)
+{
+   std::cout << "Unknown error in " << __FUNCTION__ << std::endl;
+   mTerminationPromise.set_exception(boost::current_exception());
 }
