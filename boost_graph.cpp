@@ -54,7 +54,7 @@ struct BfsPrinter: public boost::default_bfs_visitor
 void minCut()
 {
    boost::container::set<std::pair<int, int> > vertices;
-   vertices.random();
+   //vertices.random();
 }
 
 int main(int, char**)
@@ -70,7 +70,7 @@ int main(int, char**)
    //graph.add_vertex(9);
    //graph.remove_vertex(3);
 
-   //std::copy(ints.begin(), ints.end(), std::ostream_iterator<int>(std::cout, ", "));
+   std::copy(ints.begin(), ints.end(), std::ostream_iterator<int>(std::cout, ", "));
    std::cout << edges << std::endl;
 
    boost::graph_traits<tGraph>::edge_iterator ei, eiEnd;
