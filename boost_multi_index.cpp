@@ -6,6 +6,9 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
+#include <boost/phoenix.hpp>
+#include <boost/function.hpp>
+#include <boost/mem_fn.hpp>
 
 #include <algorithm>
 #include <iostream>
@@ -142,11 +145,20 @@ struct LayerInfo
    LayerInfo(int h, const tLayerPtr& ptr) : handle(h), layer(ptr) {}
    int handle;
    tLayerPtr layer;
+   std::string description;
+};
+
+struct HandleEqual
+{
+   HandleEqual(int h) : mH(h) {}
+   bool operator()(const LayerInfo& li) { return mH == li.handle; }
+   int mH;
 };
 
 void vectorWithMap()
 {
    using namespace boost::multi_index;
+   using namespace boost::phoenix::placeholders;
 
    typedef boost::multi_index_container
    <
@@ -168,31 +180,45 @@ void vectorWithMap()
       layers.push_back(LayerInfo(rand() % 100, tLayerPtr()));
    }
 
+   // iterate vector
    BOOST_FOREACH(const LayerInfo& layer, layers)
    {
       std::cout << layer.handle << ", ";
    }
    std::cout << std::endl;
 
-   layers.splice(layers.begin(), layers, layers.begin() + 1);
+   // modification is a bit cumbersome
+   LayerInfo li = layers[3];
+   li.description = "hello";
+   layers.replace(layers.begin() + 3, li);
 
-   BOOST_FOREACH(const LayerInfo& layer, layers)
-   {
-      std::cout << layer.handle << ", ";
-   }
-   std::cout << std::endl;
-
+   // iterate map
    BOOST_FOREACH(const LayerInfo& layer, layerMap)
    {
       std::cout << layer.handle << ", ";
    }
    std::cout << std::endl;
 
-   tHandleMapIndex::iterator it = layerMap.find(35);
+   // find in map
+   tHandleMapIndex::iterator it = layerMap.find(15);
    if (it != layerMap.end())
    {
-      std::cout << "Found : " << it->handle << std::endl;
+      std::cout << "Found : " << it->handle << " : " << it->description << std::endl;
    }
+
+   // find in vector and move layer up
+   tLayerMap::iterator layerIt = boost::find_if(layers, HandleEqual(15));
+   if (layerIt != layers.end())
+   {
+      std::cout << "moving up" << std::endl;
+      layers.splice(layerIt - 1, layers, layerIt);
+   }
+
+   BOOST_FOREACH(const LayerInfo& layer, layers)
+   {
+      std::cout << layer.handle << ", ";
+   }
+   std::cout << std::endl;
 }
 
 int main(int, char**)
