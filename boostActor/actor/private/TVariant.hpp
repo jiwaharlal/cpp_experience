@@ -14,14 +14,30 @@
 #pragma once
 
 #include <boost/mpl/list.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include "THandlerBase.hpp"
+
+namespace NActor
+{
+
+namespace NActorPrivate
+{
 
 template <typename TypeList>
 struct TVariantBase
 {
    virtual ~TVariantBase() {}
-   virtual void apply(THandlerBase<TypeList>&) = 0;
+   virtual void apply(NActorPrivate::THandlerBase<TypeList>&) = 0;
+};
+
+template <typename T>
+struct THanlderCaller
+{
+   static void call(THandler<T>& handler, const T& value)
+   {
+      handler(value);
+   }
 };
 
 template <typename T, typename TypeList>
@@ -31,14 +47,9 @@ struct TVariantImpl: public TVariantBase<TypeList>
       : mValue(v)
    {}
 
-   T get()
+   void apply(NActorPrivate::THandlerBase<TypeList>& handler)
    {
-      return mValue;
-   }
-
-   void apply(THandlerBase<TypeList>& handler)
-   {
-      static_cast<THandler<T>& >(handler)(mValue);
+      THanlderCaller<T>::call(static_cast<THandler<T>& >(handler), mValue);
    }
 
    T mValue;
@@ -53,13 +64,7 @@ public:
       : mHolder(new TVariantImpl<T, TypeList>(v))
    {}
 
-   template <typename T>
-   void put(const T& value)
-   {
-      mHolder.reset(new TVariantImpl<T, TypeList>(value));
-   }
-
-   void apply(THandlerBase<TypeList>& handler)
+   void apply(NActorPrivate::THandlerBase<TypeList>& handler)
    {
       mHolder->apply(handler);
    }
@@ -67,3 +72,7 @@ public:
 public:
    boost::shared_ptr<TVariantBase<TypeList> > mHolder;
 };
+
+} // NActorPrivate
+
+} // NActor

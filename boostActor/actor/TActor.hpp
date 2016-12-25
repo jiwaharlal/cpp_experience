@@ -13,32 +13,31 @@
 #pragma once
 
 #include <boost/atomic.hpp>
+#include <boost/variant.hpp>
 #include <boost/container/deque.hpp>
 #include <boost/mpl/back_inserter.hpp>
 #include <boost/mpl/copy.hpp>
-#include <boost/mpl/for_each.hpp>
-#include <boost/mpl/placeholders.hpp>
 #include <boost/mpl/vector.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/thread.hpp>
+#include <boost/thread/future.hpp>
 #include <boost/thread/lock_guard.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/variant.hpp>
-#include <boost/variant/apply_visitor.hpp>
 #include <queue>
 
-#include "THandlerBase.hpp"
-#include "TVariant.hpp"
+//#include "framework/logger/Log.hpp"
 #include "CBoard.hpp"
-#include "Wrap.hpp"
-//#include "navigation/utils/ForEach.hpp"
+#include "private/THandlerBase.hpp"
+#include "private/TVariant.hpp"
+#include "utils/ForEach.hpp"
 
-class CBoard;
+namespace NActor
+{
 
 template <typename PublicMsgTypeList, typename PrivateMsgTypeList = boost::mpl::list<> >
 class TActor   :  boost::noncopyable
-               ,  public THandlerBase
+               ,  public NActorPrivate::THandlerBase
                   <
                      typename boost::mpl::copy
                      <
@@ -54,20 +53,10 @@ class TActor   :  boost::noncopyable
                      >::type
                   >
 {
-public: // methods
-   TActor(CBoard* board);
+public: // types
+   typedef boost::shared_future<std::string> tStringFuture;
 
-   ~TActor();
-
-   boost::shared_future<std::string> start();
-
-   void stop();
-
-   virtual void post(const boost::any& anyMsg);
-
-   CBoard* board() const;
-
-private: // types
+   // TODO: can't avoid this copy-paste
    typedef typename boost::mpl::copy
    <
       PublicMsgTypeList,
@@ -79,10 +68,25 @@ private: // types
             boost::mpl::back_inserter<boost::mpl::vector<> >
          >::type
       >
-   >::type MsgTypeList;
+   >::type tMsgTypeList;
 
-   typedef TVariant<MsgTypeList> tMsgVariant;
+   typedef TActor<PublicMsgTypeList, PrivateMsgTypeList> tActor;
 
+public: // methods
+   TActor(CBoard& board);
+   virtual ~TActor();
+
+   tStringFuture start();
+
+   void stop();
+
+   virtual void post(const boost::any& anyMsg);
+
+   CBoard& board() const;
+
+private: // types
+   //typedef NActorPrivate::TVariant<tMsgTypeList> tMsgVariant;
+   boost::make_variant_over<tMsgTypeList>::type tMsgVariant;
    typedef std::queue<tMsgVariant, boost::container::deque<tMsgVariant> > tMsgQueue;
    struct MsgPusher;
 
@@ -98,7 +102,7 @@ private: // fields
    boost::promise<std::string> mTerminationPromise;
 
 protected: // fields
-   CBoard* mBoard;
+   CBoard& mBoard;
 };
 
 template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
@@ -123,24 +127,22 @@ struct TActor<PublicMsgTypeList, PrivateMsgTypeList>::MsgPusher
 };
 
 template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
-TActor<PublicMsgTypeList, PrivateMsgTypeList>::TActor(CBoard* board)
+TActor<PublicMsgTypeList, PrivateMsgTypeList>::TActor(CBoard& board)
    : mBoard(board)
-{
-}
+{}
 
 template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
 TActor<PublicMsgTypeList, PrivateMsgTypeList>::~TActor()
 {
+   stop();
 }
 
 template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
 boost::shared_future<std::string> TActor<PublicMsgTypeList, PrivateMsgTypeList>::start()
 {
    mIsStop = false;
-   boost::shared_future<std::string> terminationFuture = mTerminationPromise.get_future().share();
    mThread = boost::thread(boost::bind(&TActor::threadFunction, this));
-
-   return terminationFuture;
+   return mTerminationPromise.get_future().share();
 }
 
 template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
@@ -150,10 +152,9 @@ void TActor<PublicMsgTypeList, PrivateMsgTypeList>::stop()
 
    mIsStop = true;
    mCondition.notify_one();
-   if (!mThread.try_join_for(sJoinDuration))
+   if (mThread.joinable() && !mThread.try_join_for(sJoinDuration))
    {
       mThread.interrupt();
-      mTerminationPromise.set_value("Thread interrupted");
    }
 }
 
@@ -162,15 +163,13 @@ void TActor<PublicMsgTypeList, PrivateMsgTypeList>::post(const boost::any& anyMs
 {
    {
       boost::lock_guard<boost::mutex> lk(mMsgsMutex);
-      forEach<MsgTypeList>(MsgPusher(mMsgQueue, anyMsg));
-      //boost::mpl::for_each<MsgTypeList, Wrap<boost::mpl::placeholders::_1> >(
-            //wrapFunctor(MsgPusher(mMsgQueue, anyMsg)));
+      forEach<tMsgTypeList>(MsgPusher(mMsgQueue, anyMsg));
    }
    mCondition.notify_one();
 }
 
 template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
-CBoard* TActor<PublicMsgTypeList, PrivateMsgTypeList>::board() const
+CBoard& TActor<PublicMsgTypeList, PrivateMsgTypeList>::board() const
 {
    return mBoard;
 }
@@ -179,7 +178,7 @@ template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
 void TActor<PublicMsgTypeList, PrivateMsgTypeList>::threadFunction()
 try
 {
-   mBoard->subscribeList<PublicMsgTypeList>(this);
+   mBoard.subscribeList<PublicMsgTypeList>(this);
 
    while (!mIsStop)
    {
@@ -207,17 +206,19 @@ try
       }
    }
 
-   mBoard->unsubscribeList<MsgTypeList>(this);
+   mBoard.unsubscribeList<PublicMsgTypeList>(this);
 
    mTerminationPromise.set_value("Correct completion");
 }
 catch (const std::exception& e)
 {
-   std::cout << "Error in " << __FUNCTION__ << " : " << e.what() << std::endl;
+   //AR_LOG_ERROR << "Exception caught in TActor::threadFunction: " << e.what();
    mTerminationPromise.set_exception(e);
 }
 catch (...)
 {
-   std::cout << "Unknown error in " << __FUNCTION__ << std::endl;
+   //AR_LOG_ERROR << "Unknown exception caught in TActor::threadFunction:";
    mTerminationPromise.set_exception(boost::current_exception());
 }
+
+} // NActor

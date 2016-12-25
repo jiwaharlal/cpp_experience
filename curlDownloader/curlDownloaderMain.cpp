@@ -5,13 +5,29 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <fstream>
 #include <boost/phoenix.hpp>
+#include <boost/thread.hpp>
+#include <boost/iostreams/stream.hpp>
+#include <boost/iostreams/device/back_inserter.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
 
 #include "curlCpp/CurlRequest.h"
+
+namespace io = boost::iostreams;
 
 int progressReport(double total, double current)
 {
    std::cout << "\rProgress: " << current << "/" << total;
    return 0;
+}
+
+void load(const std::string& url, std::ostream& out)
+{
+   CurlRequest request(url, out, &progressReport);
+   if (!request.run())
+   {
+      std::cout << "Error loading data" << std::endl;
+   }
+   out.flush();
 }
 
 int main(int argc, char** argv)
@@ -31,30 +47,47 @@ int main(int argc, char** argv)
 
    std::cout << "Requested: " << url << std::endl;
 
-   std::stringstream requestResult;
-   //CurlRequest request(url, requestResult, &progressReport);
-   CurlRequest request(url, requestResult, val(0));
-   request.run();
+   std::vector<char> data;
+   io::filtering_ostream dataOstream(io::back_inserter(data));
+
+   //CurlRequest request(url, dataOstream, boost::phoenix::val(0));
+   //if (!request.run())
+   //{
+      //std::cout << "Error loading data" << std::endl;
+      //return -1;
+   //}
+   //dataOstream.flush();
+
+   boost::thread loadThread(boost::bind(&load, url, boost::ref(dataOstream)));
+   loadThread.join();
+
+   std::cout << std::endl << "Data loaded : "  << data.size() << " bytes" << std::endl;
+
+   boost::this_thread::sleep(boost::posix_time::milliseconds(500));
 
    Mat image;
 
    if (argc == 3)
    {
       std::ofstream fout(argv[2]);
-      fout << requestResult.str();
+      fout.write(&data[0], data.size());
       fout.close();
 
-      Mat image = imread(argv[2]);
+      image = imread(argv[2]);
    }
    else
    {
-      int    size = requestResult.str().size();       // Size of buffer
-      std::vector<char> buf(requestResult.str().begin(), requestResult.str().end());
+      int    size = data.size();       // Size of buffer
 
       // Create a Size(1, nSize) Mat object of 8-bit, single-byte elements
-      cv::Mat rawData  =  cv::Mat(1, &size, CV_8UC1, reinterpret_cast<void*>(&buf[0]));
+      cv::Mat rawData  =  cv::Mat(1, &size, CV_8UC1, &data[0]);
+      //Mat rawData = imgbuf(Size(256, 256), CV_8UC3, data);
+      if (!rawData.data)
+      {
+         std::cout << "Wrong raw data" << std::endl;
+      }
 
-      Mat image = imdecode(rawData, CV_LOAD_IMAGE_COLOR);
+      image = imdecode(rawData, CV_LOAD_IMAGE_COLOR);
    }
 
    if(!image.data)                              // Check for invalid input

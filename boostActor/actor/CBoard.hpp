@@ -13,22 +13,20 @@
 #pragma once
 
 #include <boost/foreach.hpp>
-#include <boost/mpl/for_each.hpp>
-#include <boost/mpl/placeholders.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/lock_guard.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/type_index.hpp>
-#include <iostream>
 #include <map>
 #include <set>
 #include <string>
 
-//#include "framework/logger/Log.hpp"
-#include "THandlerBase.hpp"
-#include "Wrap.hpp"
-//#include "navigation/utils/ForEach.hpp"
+#include "THandler.hpp"
+#include "utils/ForEach.hpp"
+
+namespace NActor
+{
 
 struct HandlerListBase {};
 
@@ -52,6 +50,7 @@ public: // methods
 
 private: // types
    typedef std::map<boost::typeindex::type_index, boost::shared_ptr<HandlerListBase> > tHandlerMap;
+   template <typename HandlerType> struct Subscriber;
 
 private: // fields
    tHandlerMap mHandlerMap;
@@ -97,6 +96,20 @@ namespace NBoardPrivate
    };
 } // NBoardPrivate
 
+template <typename MessageTypeList, typename HandlerType>
+void CBoard::subscribeList(HandlerType* handler)
+{
+   using NBoardPrivate::Subscriber;
+   forEach<MessageTypeList>(Subscriber<HandlerType>(handler, this));
+}
+
+template <typename MessageTypeList, typename HandlerType>
+void CBoard::unsubscribeList(HandlerType* handler)
+{
+   using NBoardPrivate::Unsubscriber;
+   forEach<MessageTypeList>(Unsubscriber<HandlerType>(handler, this));
+}
+
 template <typename MessageType>
 struct THandlerList: public HandlerListBase
 {
@@ -139,20 +152,6 @@ void CBoard::unsubscribe(THandler<MessageType>* handler)
    handlers.erase(handler);
 }
 
-template <typename MessageTypeList, typename HandlerType>
-void CBoard::subscribeList(HandlerType* handler)
-{
-   using NBoardPrivate::Subscriber;
-   forEach<MessageTypeList>(Subscriber<HandlerType>(handler, this));
-}
-
-template <typename MessageTypeList, typename HandlerType>
-void CBoard::unsubscribeList(HandlerType* handler)
-{
-   using NBoardPrivate::Unsubscriber;
-   forEach<MessageTypeList>(Unsubscriber<HandlerType>(handler, this));
-}
-
 template <typename MessageType>
 void CBoard::publish(MessageType message)
 {
@@ -163,8 +162,8 @@ void CBoard::publish(MessageType message)
    tHandlerMap::iterator it = mHandlerMap.find(boost::typeindex::type_id<MessageType>());
    if (it == mHandlerMap.end())
    {
-      std::cout << "No handler for message of type "
-               << boost::typeindex::type_id<MessageType>().pretty_name() << std::endl;
+      //AR_LOG_INFO << "No handler for message of type "
+               //<< boost::typeindex::type_id<MessageType>().pretty_name();
       return;
    }
 
@@ -174,3 +173,5 @@ void CBoard::publish(MessageType message)
       handler->post(message);
    }
 }
+
+} // NActor

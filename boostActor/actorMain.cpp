@@ -20,9 +20,11 @@
 #include <queue>
 #include <boost/utility/enable_if.hpp>
 
-#include "TActor.hpp"
-#include "THandlerBase.hpp"
-#include "CBoard.hpp"
+#include "actor/TActor.hpp"
+//#include "actor/THandlerBase.hpp"
+#include "actor/CBoard.hpp"
+
+using namespace NActor;
 
 struct FirstMessage{};
 typedef boost::shared_ptr<FirstMessage> tFirstMessagePtr;
@@ -59,7 +61,7 @@ class BadException: public std::exception
 class FirstSecondActor: public TActor<tPublicMsgTypeList, tPrivateMsgTypeList>
 {
 public:
-   FirstSecondActor(CBoard* board)
+   FirstSecondActor(CBoard& board)
       : TActor(board)
    {
       //board->subscribe(static_cast<THandlerBase<boost::shared_ptr<FirstMessage> >*>(this));
@@ -89,7 +91,7 @@ int main(int, char**)
 try
 {
    boost::shared_ptr<CBoard> board(new CBoard);
-   boost::shared_ptr<FirstSecondActor> actor(new FirstSecondActor(board.get()));
+   boost::shared_ptr<FirstSecondActor> actor(new FirstSecondActor(*board));
 
    boost::shared_future<std::string> actorTerminationFuture = actor->start();
 

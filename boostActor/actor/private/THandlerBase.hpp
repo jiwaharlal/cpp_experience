@@ -23,22 +23,13 @@
 #include <boost/mpl/pop_front.hpp>
 #include <boost/mpl/size.hpp>
 
-template <typename MsgType>
-class THandler
+#include "../THandler.hpp"
+
+namespace NActor
 {
-public:
-   virtual ~THandler() {}
 
-   virtual void operator ()(MsgType msg) = 0;
-
-   void post(MsgType msg)
-   {
-      post(boost::any(msg));
-   }
-
-private:
-   virtual void post(const boost::any&) = 0;
-};
+namespace NActorPrivate
+{
 
 template <typename MsgType, typename = void>
 class THandlerBase;
@@ -99,3 +90,7 @@ class THandlerBase
    >::type
 >
 {};
+
+} // NActorPrivate
+
+} // NActor

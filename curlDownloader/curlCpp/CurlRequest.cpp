@@ -1,3 +1,4 @@
+#include <iostream>
 #include <curl/curl.h>
 #include "CurlRequest.h"
 
@@ -34,10 +35,13 @@ bool CurlRequest::run()
    {
       curl_easy_setopt(curl, CURLOPT_URL, mUrl.c_str());
       curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &curlWriteCallback);
+      curl_easy_setopt(curl, CURLOPT_WRITEDATA, &mOut);
+
       curl_easy_setopt(curl, CURLOPT_NOPROGRESS, false);
       curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, &curlProgressCallback);
       curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, this);
-      curl_easy_setopt(curl, CURLOPT_WRITEDATA, &mOut);
+      curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+      curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
       res = curl_easy_perform(curl);
       curl_easy_cleanup(curl);
 

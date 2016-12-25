@@ -18,6 +18,8 @@ set( OpenCVLibs
     opencv_video
     opencv_highgui
     opencv_photo
+    boost_system
+    boost_thread
 )
 
 target_link_libraries(${PROJECT} curlCpp ${OpenCVLibs})

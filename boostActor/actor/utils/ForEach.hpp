@@ -1,7 +1,22 @@
+/**
+ * Project        CVNAR
+ * Copyright (C)  2010-2016
+ * Company        Luxoft
+ *                All rights reserved
+ * Secrecy Level  STRICTLY CONFIDENTIAL
+ *
+ * @file     ForEach.hpp
+ * @author   Maxim Bondarenko
+ * @date     09.09.2016
+ */
+
 #pragma once
 
 #include <boost/mpl/for_each.hpp>
 #include <boost/mpl/placeholders.hpp>
+
+namespace NActor
+{
 
 // declaration
 
@@ -10,7 +25,7 @@ void forEach(FunctorType functor);
 
 // implementation
 
-namespace NNaviUtilsPrivate
+namespace NActorUtilsPrivate
 {
    template <class T>
    struct Wrap{};
@@ -25,16 +40,18 @@ namespace NNaviUtilsPrivate
       template <typename T>
       void operator ()(Wrap<T>&)
       {
-         mFunctor.template operator()<T>();
+         mFunctor.operator()<T>();
       }
 
       FunctorType mFunctor;
    };
-} // NNaviUtilsPrivate
+} // NActorUtilsPrivate
 
 template <typename TypeList, typename FunctorType>
 void forEach(FunctorType functor)
 {
-   using namespace NNaviUtilsPrivate;
+   using namespace NActorUtilsPrivate;
    boost::mpl::for_each<TypeList, Wrap<boost::mpl::placeholders::_1> >(FunctorWrapper<FunctorType>(functor));
 }
+
+} // NActor
