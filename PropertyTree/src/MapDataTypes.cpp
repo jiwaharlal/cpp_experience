@@ -83,7 +83,7 @@ private:
    const std::string mName;
 };
 
-template <typename T>
+template <typename T, typename EditFunctorType>
 struct TPropertyItemImpl: public PropertyItemBase
 {
    typedef boost::function<T&()> tAccessorFuncType;
@@ -91,10 +91,12 @@ struct TPropertyItemImpl: public PropertyItemBase
    TPropertyItemImpl(
          const std::string& name,
          const tAccessorFuncType& accessor,
-         const boost::function<void()>& notifier)
+         const boost::function<void()>& notifier,
+         const EditFunctorType& editFunctor)
       : PropertyItemBase(name)
       , mAccessor(accessor)
       , mNotifier(notifier)
+      , mEditFunctor(editFunctor)
    {}
 
    virtual std::string getValue() const
@@ -106,7 +108,7 @@ struct TPropertyItemImpl: public PropertyItemBase
    {
       try
       {
-         mAccessor() = boost::lexical_cast<T>(newValue);
+         mEditFunctor(mAccessor, boost::lexical_cast<T>(newValue));
          mNotifier();
 
          return true;
@@ -121,6 +123,7 @@ struct TPropertyItemImpl: public PropertyItemBase
 
    tAccessorFuncType mAccessor;
    boost::function<void()> mNotifier;
+   EditFunctorType mEditFunctor;
 };
 
 template <typename T>
@@ -183,14 +186,15 @@ private:
    //return out;
 //}
 
-template <typename T>
+template <typename T, typename EditFunctorType>
 typename boost::disable_if<traits::is_sequence<T>, tPropPtr>::type
 generateProperty(
       const std::string& name,
       boost::function<T&()> accessor,
-      boost::function<void()> notifier)
+      boost::function<void()> notifier,
+      const EditFunctorType& editFunctor)
 {
-   return boost::make_shared<TPropertyItemImpl<T> >(name, accessor, notifier);
+   return boost::make_shared<TPropertyItemImpl<T, EditFunctorType> >(name, accessor, notifier, editFunctor);
 }
 
 template <typename T, typename SeqType, typename Index>
@@ -199,17 +203,19 @@ T& getAt(SeqType& seq)
    return at<Index>(seq);
 }
 
-template <typename Seq>
+template <typename Seq, typename EditFunctorType>
 class PropertyGenerator
 {
 public:
    PropertyGenerator(
          tPropPtr node,
          Seq& seq,
-         const boost::function<void()>& notifier)
+         const boost::function<void()>& notifier,
+         const EditFunctorType& editFunctor)
       : mNode(node)
       , mSeq(seq)
       , mNotifier(notifier)
+      , mEditFunctor(editFunctor)
    {}
 
    template <typename Index>
@@ -220,10 +226,11 @@ public:
 
       typedef typename boost::remove_reference<typename result_of::at<Seq, Index>::type>::type FieldType;
 
-      tPropPtr item = generateProperty<FieldType>(
+      tPropPtr item = generateProperty<FieldType, EditFunctorType>(
             fieldName,
             boost::bind(&getAt<FieldType, Seq, Index>, boost::ref(mSeq)),
-            mNotifier);
+            mNotifier,
+            mEditFunctor);
 
       mNode->children.push_back(item);
    }
@@ -232,19 +239,21 @@ private:
    tPropPtr mNode;
    Seq& mSeq;
    boost::function<void()> mNotifier;
+   EditFunctorType mEditFunctor;
 };
 
-template <typename T>
+template <typename T, typename EditFunctorType>
 typename boost::enable_if<traits::is_sequence<T>, tPropPtr>::type
 generateProperty(
       const std::string& name,
       boost::function<T&()> accessor,
-      boost::function<void()> notifier)
+      boost::function<void()> notifier,
+      const EditFunctorType& editFunctor)
 {
    tPropPtr node = boost::make_shared<TPropertyNodeImpl<T> >(name);
 
    typedef boost::mpl::range_c<size_t, 0, boost::fusion::result_of::size<T>::value> tIndices;
-   for_each(tIndices(), PropertyGenerator<T>(node, accessor(), notifier));
+   for_each(tIndices(), PropertyGenerator<T, EditFunctorType>(node, accessor(), notifier, editFunctor));
 
    return node;
 }
@@ -265,6 +274,15 @@ std::ostream& operator <<(std::ostream& out, const IPropertyItem& propItem)
    return out;
 }
 
+struct SimpleEditFunctor
+{
+   template <typename T>
+   void operator ()(boost::function<T&()> accessor, const T& newValue)
+   {
+      accessor() = newValue;
+   }
+};
+
 int main()
 {
 
@@ -274,7 +292,7 @@ int main()
    CRoutePoint p(c, "hello");
 
    //tPropPtr root = generateProperty<CGeoCoord>("coord", boost::phoenix::ref(c), &notifier);
-   tPropPtr root = generateProperty<CRoutePoint>("point", boost::phoenix::ref(p), &notifier);
+   tPropPtr root = generateProperty<CRoutePoint>("point", boost::phoenix::ref(p), &notifier, SimpleEditFunctor());
 
    std::cout << *root;
 
