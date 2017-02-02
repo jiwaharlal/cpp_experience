@@ -2,11 +2,11 @@ cmake_minimum_required (VERSION 2.8)
 
 set (EXECUTABLE_NAME boostPractice)
 
-#add_definitions(-std=c++11)
+add_definitions(-std=c++03)
 
 include_directories( "${CMAKE_CURRENT_SOURCE_DIR}" )
 
-find_package(Boost COMPONENTS filesystem program_options thread system chrono REQUIRED)
+find_package(Boost COMPONENTS filesystem program_options thread system chrono coroutine context REQUIRED)
 
 #FILE (GLOB SRC src/*.cpp)
 set (SRC src/practiceMain.cpp)

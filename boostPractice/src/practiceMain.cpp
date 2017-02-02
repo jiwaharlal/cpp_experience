@@ -15,6 +15,12 @@
 #include <stdexcept>
 //#include <tr1/shared_ptr.h>
 #include <typeinfo>
+#include <boost/coroutine/all.hpp>
+#include <functional>
+#include <iostream>
+#include <boost/bind.hpp>
+
+using boost::coroutines::coroutine;
 
 //#include "FutureExpectant.hpp"
 
@@ -58,24 +64,42 @@
    //return boost::make_shared_future(Gps());
 //}
 
-int main(int, char**)
+//int main(int, char**)
+//{
+   ////boost::future<int> fi = getInt();
+   ////if (fi.is_ready())
+   ////{
+      ////std::cout << fi.get() << std::endl;
+   ////}
+
+   //using namespace boost::filesystem;
+
+   //path p1("/home/mgbondarenko/Documents/map");
+   //path p2("/home/mgbondarenko/Documents/map.xml");
+
+   //std::string full1 = change_extension(p1, "zxml").string();
+   //std::string full2 = change_extension(p2, "zxml").string();
+
+   //std::cout << "path 1 " << full1 << std::endl;
+   //std::cout << "path 2 " << full2 << std::endl;
+
+   //return 0;
+//}
+
+void cooperative(coroutine<int>::push_type &sink, int i)
 {
-   //boost::future<int> fi = getInt();
-   //if (fi.is_ready())
-   //{
-      //std::cout << fi.get() << std::endl;
-   //}
+  int j = i;
+  sink(++j);
+  sink(++j);
+  std::cout << "end\n";
+}
 
-   using namespace boost::filesystem;
-
-   path p1("/home/mgbondarenko/Documents/map");
-   path p2("/home/mgbondarenko/Documents/map.xml");
-
-   std::string full1 = change_extension(p1, "zxml").string();
-   std::string full2 = change_extension(p2, "zxml").string();
-
-   std::cout << "path 1 " << full1 << std::endl;
-   std::cout << "path 2 " << full2 << std::endl;
-
-   return 0;
+int main()
+{
+  //using std::placeholders::_1;
+  coroutine<int>::pull_type source(boost::bind(cooperative, _1, 0));
+  std::cout << source.get() << '\n';
+  source();
+  std::cout << source.get() << '\n';
+  source();
 }
