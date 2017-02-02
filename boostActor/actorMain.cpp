@@ -15,24 +15,47 @@
 #include <boost/mpl/copy.hpp>
 #include <iostream>
 #include <boost/any.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <map>
 #include <set>
 #include <queue>
 #include <boost/utility/enable_if.hpp>
+#include <boost/container/vector.hpp>
+
+#define FAST_ACTOR
+
+#ifdef FAST_ACTOR
+
+#include "fastActor/TActor.hpp"
+#include "fastActor/CBoard.hpp"
+
+using namespace NFastActor;
+
+#else
 
 #include "actor/TActor.hpp"
-//#include "actor/THandlerBase.hpp"
 #include "actor/CBoard.hpp"
 
 using namespace NActor;
 
-struct FirstMessage{};
+#endif
+
+
+struct FirstMessage
+{
+   FirstMessage(int i = 0) : mI(i) {}
+   int mI;
+};
+
 typedef boost::shared_ptr<FirstMessage> tFirstMessagePtr;
 
-struct SecondMessage{};
-typedef boost::shared_ptr<SecondMessage> tSecondMessagePtr;
+struct SecondMessage
+{
+   SecondMessage(int i = 0) : mI(i) {}
+   int mI;
+};
 
-struct ThirdMessage{};
+typedef boost::shared_ptr<SecondMessage> tSecondMessagePtr;
 
 typedef boost::mpl::list<FirstMessage, SecondMessage> tPublicMsgTypeList;
 
@@ -63,33 +86,62 @@ class FirstSecondActor: public TActor<tPublicMsgTypeList, tPrivateMsgTypeList>
 public:
    FirstSecondActor(CBoard& board)
       : TActor(board)
+      , mResult(0)
    {
-      //board->subscribe(static_cast<THandlerBase<boost::shared_ptr<FirstMessage> >*>(this));
-      //board->subscribe<FirstMessage>(this);
+      board.subscribe<std::string>(this);
    }
 
-private:
-   virtual void operator ()(FirstMessage)
+protected:
+
+#ifdef FAST_ACTOR
+   virtual void handle(const FirstMessage& m)
+#else
+   virtual void operator()(const FirstMessage& m)
+#endif
    {
-      std::cout << "First message handled" << std::endl;
+      mResult += m.mI;
+      //std::cout << "First message handled" << std::endl;
    }
 
-   virtual void operator ()(SecondMessage)
+#ifdef FAST_ACTOR
+   virtual void handle(const SecondMessage& m)
+#else
+   virtual void operator()(const SecondMessage& m)
+#endif
    {
-      std::cout << "SecondMessage handled" << std::endl;
-      //throw boost::bad_function_call();
-      throw BadException();
+      mResult += m.mI;
+      //std::cout << "SecondMessage handled" << std::endl;
    }
 
-   virtual void operator ()(std::string)
+#ifdef FAST_ACTOR
+   virtual void handle(const std::string&)
+#else
+   virtual void operator()(const std::string&)
+#endif
    {
+      std::cout << "Result : " << mResult << std::endl;
       std::cout << "std::string handled" << std::endl;
+      //throw BadException();
+      stopFromInside();
    }
+
+//#ifdef FAST_ACTOR
+   //virtual void handle(const boost::container::vector<int>& v)
+//#else
+   //virtual void operator()(const boost::container::vector<int>& v)
+//#endif
+   //{
+      //mResult += v.size();
+   //}
+
+   long long mResult;
 };
 
 int main(int, char**)
 try
 {
+   using boost::posix_time::microsec_clock;
+
    boost::shared_ptr<CBoard> board(new CBoard);
    boost::shared_ptr<FirstSecondActor> actor(new FirstSecondActor(*board));
 
@@ -104,31 +156,45 @@ try
    //actor->post(fm);
    //actor->post(intMsg);
 
+   boost::posix_time::ptime startTime = microsec_clock::local_time();
+
    board->publish(*fm);
    board->publish(*intMsg);
-   board->publish(std::string("hello"));
+
+   int total;
+
+   for (int i = 0; i < 1000000; i++)
+   {
+      //tFirstMessagePtr first = boost::make_shared<FirstMessage>(i);
+      //tSecondMessagePtr second = boost::make_shared<SecondMessage>(i);
+
+      board->publish(FirstMessage(i));
+      board->publish(SecondMessage(i));
+
+      //board->publish(boost::container::vector<int>(i % 1000, 10));
+
+      total += i;
+   }
+
+   boost::posix_time::ptime endPublishTime = microsec_clock::local_time();
+
+   board->publish(std::string("stop"));
    board->publish(SecondMessage());
 
-   actor->post(std::string("hello"));
+   //actor->post(std::string("hello"));
    //board->publish(intMsg);
 
-   boost::this_thread::sleep(boost::posix_time::milliseconds(200));
-   actor->stop();
+   //boost::this_thread::sleep(boost::posix_time::milliseconds(20000000));
+   //actor->stop();
 
    boost::shared_future<std::string>* futureIt = boost::wait_for_any(&actorTerminationFuture, &actorTerminationFuture);
-   //if (futureIt->has_value())
-   //{
-      std::cout << "Actor terminated with message : " << futureIt->get() << std::endl;
-   //}
-   //else
-   //{
-      //std::cout << "Actor terminated with exception : " << futureIt->get_exception_ptr() << std::endl;
-   //}
 
-   //boost::this_thread::sleep(boost::posix_time::milliseconds(200));
-   //std::cout << actor->mMsgQueue.size() << " messages in queue" << std::endl;
+   std::cout << "Actor terminated with message : " << futureIt->get() << std::endl;
 
-   //std::cout << "Size of actor: " << sizeof(FirstSecondActor) << std::endl;
+   boost::posix_time::ptime terminationTime = microsec_clock::local_time();
+
+   std::cout << "Start to end publish, microsec: " << (endPublishTime - startTime).total_microseconds() << std::endl;
+   std::cout << "End publish to termination: " << (terminationTime - endPublishTime).total_microseconds() << std::endl;
 
    return 0;
 }

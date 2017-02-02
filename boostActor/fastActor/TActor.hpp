@@ -12,77 +12,80 @@
 
 #pragma once
 
+#include <boost/move/move.hpp>
 #include <boost/atomic.hpp>
 #include <boost/variant.hpp>
 #include <boost/container/deque.hpp>
-#include <boost/mpl/back_inserter.hpp>
-#include <boost/mpl/copy.hpp>
-#include <boost/mpl/vector.hpp>
+//#include <boost/mpl/back_inserter.hpp>
+//#include <boost/mpl/copy.hpp>
+//#include <boost/mpl/vector.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/thread.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/thread/lock_guard.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/mutex.hpp>
+#include <iostream>
 #include <queue>
+#include <boost/circular_buffer.hpp>
+#include <boost/lockfree/queue.hpp>
 
-//#include "framework/logger/Log.hpp"
 #include "CBoard.hpp"
-#include "private/THandlerBase.hpp"
-#include "private/TVariant.hpp"
+#include "private/THandlerNode.hpp"
 #include "utils/ForEach.hpp"
 
-namespace NActor
+namespace NFastActor
 {
 
 template <typename PublicMsgTypeList, typename PrivateMsgTypeList = boost::mpl::list<> >
-class TActor   :  boost::noncopyable
-               ,  public NActorPrivate::THandlerBase
-                  <
-                     typename boost::mpl::copy
-                     <
-                        PublicMsgTypeList,
-                        boost::mpl::back_inserter
-                        <
-                           typename boost::mpl::copy
-                           <
-                              PrivateMsgTypeList,
-                              boost::mpl::back_inserter<boost::mpl::vector<> >
-                           >::type
-                        >
-                     >::type
-                  >
+class TActor   : boost::noncopyable
+               , public boost::static_visitor<void>
+               , public NActorPrivate::THandlerNode
+                 <
+                     typename JoinLists<PublicMsgTypeList, PrivateMsgTypeList>::type,
+                     typename boost::make_variant_over<
+                        typename JoinLists<PublicMsgTypeList, PrivateMsgTypeList>::type>::type
+                 >
 {
-public: // types
-   typedef boost::shared_future<std::string> tStringFuture;
+private: // types
+   //typedef boost::shared_future<std::string> tStringFuture;
 
-   // TODO: can't avoid this copy-paste
-   typedef typename boost::mpl::copy
-   <
-      PublicMsgTypeList,
-      boost::mpl::back_inserter
-      <
-         typename boost::mpl::copy
-         <
-            PrivateMsgTypeList,
-            boost::mpl::back_inserter<boost::mpl::vector<> >
-         >::type
-      >
-   >::type tMsgTypeList;
+   typedef typename JoinLists<PublicMsgTypeList, PrivateMsgTypeList>::type tMsgTypeList;
 
-   typedef TActor<PublicMsgTypeList, PrivateMsgTypeList> tActor;
+   //typedef TActor<PublicMsgTypeList, PrivateMsgTypeList> tActor;
+
+private: // types
+   typedef typename boost::make_variant_over<tMsgTypeList>::type tMsgVariant;
+   typedef std::queue<tMsgVariant, boost::container::deque<tMsgVariant> > tMsgQueue;
+   //typedef boost::lockfree::queue<tMsgVariant> tMsgQueue;
+   //typedef boost::circular_buffer<tMsgVariant> tMsgQueue;
 
 public: // methods
    TActor(CBoard& board);
    virtual ~TActor();
 
-   tStringFuture start();
+   boost::shared_future<std::string> start();
 
    void stop();
 
-   virtual void post(const boost::any& anyMsg);
+   virtual void postVariant(const tMsgVariant& msgVariant)
+   {
+      {
+         boost::lock_guard<boost::mutex> lk(mMsgsMutex);
+         mMsgQueue.push(msgVariant);
+         //mMsgQueue.push_back(msgVariant);
+
+         mMaxMessageCount = std::max(mMaxMessageCount, static_cast<int>(mMsgQueue.size()));
+      }
+      mCondition.notify_one();
+   }
 
    CBoard& board() const;
+
+   template <typename MessageType> void operator ()(const MessageType& msg)
+   {
+      static_cast<THandler<MessageType>*>(this)->handle(msg);
+   }
 
 protected: // methods
    void stopFromInside()
@@ -90,12 +93,6 @@ protected: // methods
       mIsStop = true;
       mCondition.notify_one();
    }
-
-private: // types
-   typedef NActorPrivate::TVariant<tMsgTypeList> tMsgVariant;
-   //boost::make_variant_over<tMsgTypeList>::type tMsgVariant;
-   typedef std::queue<tMsgVariant, boost::container::deque<tMsgVariant> > tMsgQueue;
-   struct MsgPusher;
 
 private: // methods
    void threadFunction();
@@ -108,34 +105,17 @@ private: // fields
    boost::condition_variable mCondition;
    boost::promise<std::string> mTerminationPromise;
 
+   int mMaxMessageCount;
+
 protected: // fields
    CBoard& mBoard;
 };
 
 template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
-struct TActor<PublicMsgTypeList, PrivateMsgTypeList>::MsgPusher
-{
-   MsgPusher(tMsgQueue& msgQueue, const boost::any& anyMsg)
-      : mMsgQueue(msgQueue)
-      , mAnyMsg(anyMsg)
-   {}
-
-   template <typename MsgType>
-   void operator ()()
-   {
-      if (mAnyMsg.type() == typeid(MsgType))
-      {
-         mMsgQueue.push(tMsgVariant(boost::any_cast<MsgType>(mAnyMsg)));
-      }
-   }
-
-   tMsgQueue& mMsgQueue;
-   const boost::any& mAnyMsg;
-};
-
-template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
 TActor<PublicMsgTypeList, PrivateMsgTypeList>::TActor(CBoard& board)
    : mBoard(board)
+   , mMaxMessageCount(0)
+   , mMsgQueue()
 {}
 
 template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
@@ -163,16 +143,6 @@ void TActor<PublicMsgTypeList, PrivateMsgTypeList>::stop()
    {
       mThread.interrupt();
    }
-}
-
-template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
-void TActor<PublicMsgTypeList, PrivateMsgTypeList>::post(const boost::any& anyMsg)
-{
-   {
-      boost::lock_guard<boost::mutex> lk(mMsgsMutex);
-      forEach<tMsgTypeList>(MsgPusher(mMsgQueue, anyMsg));
-   }
-   mCondition.notify_one();
 }
 
 template <typename PublicMsgTypeList, typename PrivateMsgTypeList>
@@ -207,13 +177,16 @@ try
       {
          tMsgVariant msg = mMsgQueue.front();
          mMsgQueue.pop();
+         //mMsgQueue.pop_front();
          lk.release()->unlock();
 
-         msg.apply(*this);
+         boost::apply_visitor(*this, msg);
       }
    }
 
    mBoard.unsubscribeList<PublicMsgTypeList>(this);
+
+   std::cout << "Max messages: " << mMaxMessageCount << "\n";
 
    mTerminationPromise.set_value("Correct completion");
 }
@@ -228,4 +201,4 @@ catch (...)
    mTerminationPromise.set_exception(boost::current_exception());
 }
 
-} // NActor
+} // NFastActor

@@ -53,13 +53,13 @@ class THandler
 public: // methods
    virtual ~THandler() {}
 
-   void post(MsgType msg)
+   void post(const MsgType& msg)
    {
       post(boost::any(msg));
    }
 
 protected: // methods
-   virtual void operator ()(MsgType msg) = 0;
+   virtual void operator ()(const MsgType& msg) = 0;
    virtual void post(const boost::any&) = 0;
 
    friend struct NActorPrivate::THanlderCaller<MsgType>;

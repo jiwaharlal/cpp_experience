@@ -12,6 +12,8 @@
 
 #pragma once
 
+#include <boost/container/flat_map.hpp>
+#include <boost/container/flat_set.hpp>
 #include <boost/foreach.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
@@ -20,14 +22,12 @@
 #include <boost/type_index.hpp>
 #include <map>
 #include <set>
-#include <boost/container/flat_map.hpp>
-#include <boost/container/flat_set.hpp>
 #include <string>
 
 #include "THandler.hpp"
 #include "utils/ForEach.hpp"
 
-namespace NActor
+namespace NFastActor
 {
 
 struct HandlerListBase {};
@@ -52,7 +52,6 @@ public: // methods
 
 private: // types
    typedef boost::container::flat_map<boost::typeindex::type_index, boost::shared_ptr<HandlerListBase> > tHandlerMap;
-   template <typename HandlerType> struct Subscriber;
 
 private: // fields
    tHandlerMap mHandlerMap;
@@ -170,10 +169,10 @@ void CBoard::publish(MessageType message)
    }
 
    tHandlerSet& handlers = static_cast<THandlerList<MessageType>* >(it->second.get())->mHandlers;
-   BOOST_FOREACH (typename tHandlerSet::value_type handler, handlers)
+   BOOST_FOREACH (typename tHandlerSet::reference handler, handlers)
    {
       handler->post(message);
    }
 }
 
-} // NActor
+} // NFastActor
