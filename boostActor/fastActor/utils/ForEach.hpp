@@ -60,7 +60,7 @@ namespace NActorUtilsPrivate
       template <typename T>
       void operator ()(Wrap<T>&)
       {
-         mFunctor.operator()<T>();
+         mFunctor.template operator()<T>();
       }
 
       FunctorType mFunctor;
