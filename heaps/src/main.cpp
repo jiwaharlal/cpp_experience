@@ -10,6 +10,7 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/lambda/lambda.hpp>
+#include <boost/range/algorithm.hpp>
 #include <cstdio>
 #include <boost/function.hpp>
 #include <boost/lambda/control_structures.hpp>
@@ -90,7 +91,7 @@ void sets()
         ints.insert( i );
     }
 
-    std::for_each( ints.begin(), ints.end(), std::cout << _1 << " ");
+    std::for_each(ints.begin(), ints.end(), std::cout << _1 << " ");
     std::cout << std::endl;
 
     // std::remove_if( ints.begin(), ints.end(), _1 == 4 );
@@ -99,56 +100,30 @@ void sets()
 
     int i = 1;
     std::cout << (_1 = 2, _1 + boost::ref(i))(i) << std::endl;
-    boost::function< int (int&) > func = ( _1 * 2 );
+    boost::function<int(int&)> func = (_1 * 2);
 
     std::cout << createMyltiplier( 5 )( 4 ) << std::endl;
 }
 
-int main( int argc, char** argv )
+int main()
 {
-    using namespace boost::lambda;
+    std::vector<int> ints(20);
+    boost::generate(ints, boost::bind(&rnd, 0, 100));
 
-    //sets();
+    std::cout << ints << std::endl;
+    std::cout << "Min element: " << *boost::min_element(ints) << std::endl;
 
-    //return 0;
+    boost::make_heap(ints);
 
-    (void) argc;
-    (void) argv;
+    std::cout << "heap:\n" << ints << std::endl;
 
-    std::vector< int > ints;
-    ints.reserve( 20 );
-    for ( int i = 0; i < 30; i++ )
+    for (int i = 0; i < 10; i++)
     {
-        ints.push_back( rnd(0, 100 ) );
-    }
-
-
-    std::cout << ints << std::endl;
-    std::for_each( ints.begin(), ints.end(), std::cout << _1 << " " );
-    std::cout << std::endl;
-    //std::for_each(ints.begin(), ints.end(), boost::bind(&rnd, 5) );
-    //std::find_if(ints.begin(), ints.end(), boost::bind(std::less<int>(), 5, _1));
-    std::cout << "Min element: " <<  *std::min_element(ints.begin(), ints.end()) << std::endl;
-
-    ints.erase( std::remove_if( ints.begin(), ints.end(), _1 < 50 ), ints.end() );
-    // std::vector< int >::iterator newEnd = std::remove_if(ints.begin(), ints.end(), boost::bind(std::less<int>(), 50, _1));
-    // ints.erase( newEnd, ints.end() );
-    std::cout << ints << std::endl;
-
-    //return 0;
-
-    std::make_heap( ints.begin(), ints.end() );
-    std::cout << ints << std::endl;
-
-//    std::cout << "heap: " << ints << std::endl;
-    for ( int i = 0; i < 10; i++ )
-    {
-        std::pop_heap( ints.begin(), ints.end() );
+        boost::pop_heap(ints);
+        std::cout << "Popped element: " << ints.back() << std::endl;
         ints.pop_back();
         std::cout << ints << std::endl;
     }
-
-    sharedPtrs();
 
     return 0;
 }

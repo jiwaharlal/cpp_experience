@@ -4,6 +4,7 @@
 #include <boost/next_prior.hpp>
 #include <iostream>
 #include <list>
+#include <vector>
 
 struct Type1{};
 struct Type2{};
@@ -69,6 +70,18 @@ int main(int, char**)
       }
    }
    boost::copy(ints, std::ostream_iterator<int>(std::cout, ", "));
+   std::cout << std::endl;
+
+   std::vector<int32_t> non_unique{1, 2, 2, 3, 4, 4, 4, 5, 6, 7, 7, 7};
+   auto unique_range = boost::unique(non_unique);
+   auto adjacent_range = boost::adjacent_find(non_unique);
+
+   std::cout << "Adjacent range:\n";
+   boost::copy(adjacent_range, std::ostream_iterator<int32_t>(std::cout, ", "));
+   std::cout << std::endl;
+
+   std::cout << "Unique range:\n";
+   boost::copy(unique_range, std::ostream_iterator<int32_t>(std::cout, ", "));
    std::cout << std::endl;
 
    return 0;
