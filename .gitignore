@@ -8,3 +8,4 @@ GpsReader/build
 *.out
 heaps/build
 */build
+*/release
