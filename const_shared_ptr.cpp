@@ -17,9 +17,12 @@ void f1(const tStrPtr& str)
 int main()
 {
    tStrPtr s = boost::make_shared<std::string>("hi");
+   boost::shared_ptr<const std::string> s2 = s;
    f1(s);
 
-   std::cout << *s << "\n";
+   s2->clear();
+
+   std::cout << *s2 << "\n";
 
    return 0;
 }
