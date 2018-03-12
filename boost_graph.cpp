@@ -64,13 +64,13 @@ int main(int, char**)
 
    typedef std::pair<int, int> tEdge;
    std::vector<tEdge> edges = {{0, 1}, {1, 2}, {0, 2}, {2, 3}, {3, 9}};
-   std::vector<int> ints = {1, 2, 3, 4};
+   //std::vector<int> ints = {1, 2, 3, 4};
 
    tGraph graph(edges.begin(), edges.end(), 15);
    //graph.add_vertex(9);
    //graph.remove_vertex(3);
 
-   std::copy(ints.begin(), ints.end(), std::ostream_iterator<int>(std::cout, ", "));
+   //std::copy(ints.begin(), ints.end(), std::ostream_iterator<int>(std::cout, ", "));
    std::cout << edges << std::endl;
 
    boost::graph_traits<tGraph>::edge_iterator ei, eiEnd;
@@ -85,12 +85,16 @@ int main(int, char**)
    }
    std::cout << std::endl;
 
-   boost::tie(vi, viEnd);
+   boost::tie(vi, viEnd) = boost::vertices(graph);
    auto it = std::find(vi, viEnd, 0);
    if (it != viEnd)
    {
-      std::cout << "Removing vertex" << *it << std::endl;
+      std::cout << "Removing vertex " << *it << std::endl;
       boost::remove_vertex(*it, graph);
+      boost::tie(vi, viEnd) = boost::vertices(graph);
+      std::cout << "Vertices left: ";
+      std::copy(vi, viEnd, std::ostream_iterator<int>(std::cout, ", "));
+      std::cout << std::endl;
    }
    else
    {
