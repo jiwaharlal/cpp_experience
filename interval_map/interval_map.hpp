@@ -58,49 +58,30 @@ public:
         {
             auto prev_it = std::prev(end_it);
 
-            auto next_it = end_it;
-
-            if (prev_it->second != val)
+            if (!(prev_it->second == val))
             {
-                std::cout << "Inserting " << boost::tie(keyEnd, prev_it->second) << std::endl;
+                auto next_it = end_it;
                 std::tie(end_it, std::ignore) = m_map.emplace(keyEnd, prev_it->second);
 
                 if (next_it != m_map.end() && next_it->second == end_it->second)
                 {
-                    std::cout << "Erasing " << boost::tie(next_it->first, next_it->second) << std::endl;
                     m_map.erase(next_it);
                 }
             }
         }
         else if (end_it->second == val)
         {
-            std::cout << "Erasing " << boost::tie(end_it->first, end_it->second) << std::endl;
-            auto erase_it = end_it++;
-            m_map.erase(erase_it);
+            ++end_it;
+            should_erase = true;
         }
 
-        //if (pre_begin_it->second != val)
-        //{
-            //// if pre_begin_it is exact match by keyBegin and previous element value = val, erase
-            //if (!(pre_begin_it->first < keyBegin)
-                    //&& pre_begin_it != m_map.begin()
-                    //&& std::prev(pre_begin_it)->second == val)
-            //{
-                //m_map.erase(pre_begin_it);
-            //}
-            //else
-            //{
-                //m_map[keyBegin] = val;
-            //}
-        //}
-
         // if range start already = val, do nothing
-        if (pre_begin_it->second != val)
+        if (!(pre_begin_it->second == val))
         {
-            // if pre_begin_it is exact match by keyBegin
+            // if pre_begin_it is exact match for keyBegin
             if (!(pre_begin_it->first < keyBegin))
             {
-                if (pre_begin_it != m_map.begin() && std::prev(pre_begin_it)->second == val)
+                if (!(pre_begin_it == m_map.begin()) && std::prev(pre_begin_it)->second == val)
                 {
                     m_map.erase(pre_begin_it);
                 }
@@ -119,6 +100,15 @@ public:
         {
             m_map.erase(begin_it, end_it);
         }
+    }
+
+    void assign_slow( K const& keyBegin, K const& keyEnd, V const& val )
+    {
+        auto begin_it = m_map.lower_bound(keyBegin);
+        auto end_it = m_map.lower_bound(keyEnd);
+        m_map.erase(begin_it, end_it);
+        m_map[keyBegin] = val;
+        m_map[keyEnd] = val;
     }
 
     const mapped_type& at(const key_type& k) const

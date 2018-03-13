@@ -19,6 +19,15 @@ struct Key
     BaseType v;
 };
 
+template <typename BaseType>
+struct Value
+{
+    Value(BaseType v) : v(v) {}
+    bool operator ==(const Value<BaseType>& other) const { return v == other.v; }
+
+    BaseType v;
+};
+
 namespace std
 {
 
@@ -38,6 +47,12 @@ template <typename BaseType>
 std::ostream& operator <<(std::ostream& out, const Key<BaseType>& k)
 {
     return out << "k(" << k.v << ")";
+}
+
+template <typename BaseType>
+std::ostream& operator <<(std::ostream& out, const Value<BaseType>& v)
+{
+    return out << "v(" << v.v << ")";
 }
 
 template <typename K, typename V>
@@ -88,7 +103,7 @@ bool equals(const MapType1& map1, const MapType2& map2, int range)
 {
     for (int i = 0; i < range; i++)
     {
-        if (map1.at(i) != map2.at(i))
+        if (!(map1.at(i) == map2.at(i)))
         {
             return false;
         }
@@ -104,9 +119,10 @@ bool repetitionsPresent(const MapType& m)
     return boost::adjacent_find(values) != values.end();
 }
 
+template <typename IntervalMapType, typename CheckMapType>
 void initMaps(
-        interval_map<IntKey, unsigned int>& int_map,
-        std::map<IntKey, unsigned int>& check_map,
+        IntervalMapType& int_map,
+        CheckMapType& check_map,
         int map_size,
         unsigned int default_value)
 {
@@ -114,7 +130,7 @@ void initMaps(
     {
         check_map[i] = default_value;
     }
-    int_map = interval_map<IntKey, unsigned int>(default_value);
+    int_map = interval_map<IntKey, Value<unsigned int>>(default_value);
 }
 
 void randomTest()
@@ -125,16 +141,16 @@ void randomTest()
     std::default_random_engine m_re;
 
     const auto default_value = 23u;
-    interval_map<IntKey, unsigned int> int_map(default_value);
+    interval_map<IntKey, Value<unsigned int>> int_map(default_value);
     std::map<IntKey, unsigned int> check_map;
 
     initMaps(int_map, check_map, map_size, default_value);
 
-    for (int i = 0; i < 10000; i++)
+    for (int i = 0; i < 100000; i++)
     {
         if (value_dist(m_re) % 10 == 0)
         {
-            std::cout << "Resettings maps\n";
+            //std::cout << "Resettings maps\n";
             initMaps(int_map, check_map, map_size, default_value);
         }
 
@@ -154,7 +170,7 @@ void randomTest()
         int_map.assign(key_range.first, key_range.second, value);
 
         if (!equals(int_map, check_map, map_size)
-                || int_map.at(map_size + 10) != default_value
+                || !(int_map.at(map_size + 10) == default_value)
                 || repetitionsPresent(int_map.m_map))
         {
             std::cout << "Test failed inserting " << value
