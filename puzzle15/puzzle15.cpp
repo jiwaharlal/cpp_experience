@@ -1,6 +1,8 @@
 #include <array>
 #include <cinttypes>
 #include <cmath>
+#include <chrono>
+#include <random>
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
@@ -22,7 +24,8 @@
 #include <boost/tuple/tuple_io.hpp>
 
 // [row][column]
-using CellGrid = std::array<std::array<std::int32_t, 4>, 4>;
+const std::int32_t c_field_side_size = 4;
+using CellGrid = std::array<std::array<std::int8_t, c_field_side_size>, c_field_side_size>;
 
 struct Move
 {
@@ -198,24 +201,25 @@ std::ostream& operator <<(std::ostream& out, const Field& f)
     return out;
 }
 
-std::set<EMove> getAvailableMoves(const Field& field)
+std::vector<EMove> getAvailableMoves(const Field& field)
 {
-    std::set<EMove> moves;
+    std::vector<EMove> moves;
+    moves.reserve(4);
     if (field.empty_cell.row != 0)
     {
-        moves.insert(EMove::Down);
+        moves.push_back(EMove::Down);
     }
     if (field.empty_cell.col != 0)
     {
-        moves.insert(EMove::Right);
+        moves.push_back(EMove::Right);
     }
     if (field.empty_cell.row != field.cells.size() - 1)
     {
-        moves.insert(EMove::Up);
+        moves.push_back(EMove::Up);
     }
     if (field.empty_cell.col != field.cells.size() - 1)
     {
-        moves.insert(EMove::Left);
+        moves.push_back(EMove::Left);
     }
 
     return moves;
@@ -406,8 +410,8 @@ out_edges(const PuzzleStateSpace::vertex_descriptor& v, const PuzzleStateSpace&)
     }
 
     return std::make_pair(
-            OutEdgeIterator(EdgeSetIteratorPtr(edge_set, new EdgeSet::iterator(edge_set->begin()))),
-            OutEdgeIterator(EdgeSetIteratorPtr(edge_set, new EdgeSet::iterator(edge_set->end()))));
+        OutEdgeIterator(EdgeSetIteratorPtr(edge_set, new EdgeSet::iterator(edge_set->begin()))),
+        OutEdgeIterator(EdgeSetIteratorPtr(edge_set, new EdgeSet::iterator(edge_set->end()))));
 }
 
 template <typename K, typename V>
@@ -467,9 +471,65 @@ EMove restoreMove(const Field& src, const Field& dst)
     }
 }
 
+Field generateRandomField()
+{
+    const auto c_field_size = c_field_side_size * c_field_side_size;
+
+    std::default_random_engine re(std::chrono::system_clock::now().time_since_epoch().count());
+    std::uniform_real_distribution<double> cell_dist(1, c_field_size - 1);
+    auto random_int = [&](int i) { return cell_dist(re); };
+
+    std::vector<std::int32_t> cells;
+    for (std::size_t i = 1; i < c_field_size; i++)
+    {
+        cells.push_back(i);
+    }
+
+    boost::random_shuffle(cells, random_int);
+    std::int32_t empty_cell_pos = c_field_size - 1;
+
+    if (c_field_size % 2 == 0)
+    {
+        std::int32_t inversions = 0;
+        for (int32_t i = 0; i < static_cast<std::int32_t>(cells.size()) - 1; i++)
+        {
+            if (cells[i] == 0)
+            {
+                continue;
+            }
+
+            for (int j = i + 1; j < static_cast<std::int32_t>(cells.size()); j++)
+            {
+                if (cells[j] != 0 && cells[j] < cells[i])
+                {
+                    inversions++;
+                }
+            }
+        }
+
+        std::cout << "Inversions: " << inversions << std::endl;
+
+        empty_cell_pos -= (inversions % 2) * c_field_side_size;
+    }
+
+    cells.insert(cells.begin() + empty_cell_pos, 0);
+
+    Field field;
+    for (std::int32_t i = 0; i < c_field_side_size; i++)
+    {
+        for (std::int32_t j = 0; j < c_field_side_size; j++)
+        {
+            field.cells[i][j] = cells[i * c_field_side_size + j];
+        }
+    }
+    field.empty_cell = Position{empty_cell_pos / c_field_side_size, empty_cell_pos % c_field_side_size};
+
+    return field;
+}
+
 int main(int argc, char** argv)
 {
-    auto state = end_state;
+    auto state = generateRandomField();
 
     if (argc == 2)
     {
@@ -480,13 +540,13 @@ int main(int argc, char** argv)
     std::cout << state;
     std::cout << std::boolalpha << isEndState(state) << std::endl;
 
-    for (const auto m : { EMove::Down, EMove::Right, EMove::Down, EMove::Left })
-    {
-        auto prev_state = state;
-        std::cout << "Applying move: " << m << std::endl;
-        applyMoveInPlace(state, m);
-        std::cout << state << "distance to goal: " << distanceToGoal(state) << std::endl;
-    }
+    //for (const auto m : { EMove::Down, EMove::Right, EMove::Down, EMove::Left })
+    //{
+        //auto prev_state = state;
+        //std::cout << "Applying move: " << m << std::endl;
+        //applyMoveInPlace(state, m);
+        //std::cout << state << "distance to goal: " << distanceToGoal(state) << std::endl;
+    //}
 
     auto initial_state = state;
 
