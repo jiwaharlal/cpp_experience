@@ -1,5 +1,8 @@
 #include <array>
+#include <cinttypes>
+#include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -8,22 +11,84 @@
 #include <set>
 #include <vector>
 
-//#include <boost/graph/adjacency_list.hpp>
-#include <boost/property_map/property_map.hpp>
+#include <boost/assign.hpp>
+#include <boost/bimap.hpp>
 #include <boost/graph/astar_search.hpp>
 #include <boost/graph/graph_concepts.hpp>
 #include <boost/graph/graph_traits.hpp>
+#include <boost/property_map/property_map.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
+#include <boost/tuple/tuple_io.hpp>
 
 // [row][column]
 using CellGrid = std::array<std::array<std::int32_t, 4>, 4>;
 
+struct Move
+{
+    bool isLegal() const
+    {
+        return std::labs(d_row) + std::labs(d_col) == 1;
+    }
+
+    bool operator <(const Move& other) const
+    {
+        return std::tie(d_row, d_col) < std::tie(other.d_row, other.d_col);
+    }
+
+    std::int32_t d_row;
+    std::int32_t d_col;
+};
+
 struct Position
 {
-    std::size_t row;
-    std::size_t col;
+    std::int32_t row;
+    std::int32_t col;
 };
+
+Position& operator +=(Position& lhs, const Move& rhs)
+{
+    lhs.col += rhs.d_col;
+    lhs.row += rhs.d_row;
+    return lhs;
+}
+
+Position operator +(const Position& lhs, const Move& rhs)
+{
+    Position result(lhs);
+    result += rhs;
+
+    return result;
+}
+
+Move operator -(const Position& lhs, const Position& rhs)
+{
+    return Move{lhs.row - rhs.row, lhs.col - rhs.col};
+}
+
+std::ostream& operator<< (std::ostream& out, const Move& m)
+{
+    return out << boost::tie(m.d_row, m.d_col);
+}
+
+// Defines options to move a chip
+enum class EMove
+{
+    Up = 0x1,
+    Down = 0x2,
+    Left = 0x4,
+    Right = 0x8
+};
+
+using MovesMap = boost::bimap<EMove, Move>;
+static const MovesMap moves_map = boost::assign::list_of<MovesMap::relation>
+    (EMove::Up, Move{1, 0})
+    (EMove::Down, Move{-1, 0})
+    (EMove::Left, Move{0, 1})
+    (EMove::Right, Move{0, -1});
+
+static const auto& move_enum_to_struct = moves_map.left;
+static const auto& move_struct_to_enum = moves_map.right;
 
 struct Field;
 std::ostream& operator <<(std::ostream&, const Field&);
@@ -37,7 +102,7 @@ struct Field
 
     bool operator ==(const Field& other) const
     {
-        std::cout << "Equal\n" << other;
+        //std::cout << "Equal\n" << other;
 
         return boost::equal(cells, other.cells);
     }
@@ -62,35 +127,19 @@ struct Field
         return false;
     }
 
+    CellGrid::value_type::reference operator[](const Position& p)
+    {
+        return cells[p.row][p.col];
+    }
+
+    CellGrid::value_type::const_reference operator[](const Position& p) const
+    {
+        return cells[p.row][p.col];
+    }
+
     CellGrid cells;
     Position empty_cell;
 };
-
-// Defines options to move a chip
-enum class EMove
-{
-    Up = 0x1,
-    Down = 0x2,
-    Left = 0x4,
-    Right = 0x8
-};
-
-EMove revertMove(EMove move)
-{
-    switch (move)
-    {
-        case EMove::Up:
-            return EMove::Down;
-        case EMove::Down:
-            return EMove::Up;
-        case EMove::Left:
-            return EMove::Right;
-        case EMove::Right:
-            return EMove::Left;
-        default:
-            throw std::runtime_error("Unknown move: ");
-    }
-}
 
 std::ostream& operator <<(std::ostream& out, const EMove& m)
 {
@@ -160,6 +209,7 @@ std::ostream& operator <<(std::ostream& out, const Field& f)
         }
         out << "\n";
     }
+    std::cout << "empty_cell: " << boost::tie(f.empty_cell.row, f.empty_cell.col) << std::endl;
 
     return out;
 }
@@ -184,40 +234,15 @@ std::set<EMove> getAvailableMoves(const Field& field)
         moves.insert(EMove::Left);
     }
 
-    //std::cout << "For field\n" << field << "available moves: ";
-    //boost::copy(moves, std::ostream_iterator<EMove>(std::cout, ", "));
-    //std::cout << std::endl;
-
     return moves;
 }
 
 void applyMoveInPlace(Field& field, EMove move)
 {
-    auto& empty_cell = field.empty_cell;
-    auto& cells = field.cells;
-    auto& row = cells[empty_cell.row];
-    const auto& col_index = empty_cell.col;
-    switch (move)
-    {
-        case EMove::Left:
-            std::swap(row[empty_cell.col], row[empty_cell.col + 1]);
-            field.empty_cell.col++;
-            return;
-        case EMove::Right:
-            std::swap(row[empty_cell.col], row[empty_cell.col - 1]);
-            field.empty_cell.col--;
-            return;
-        case EMove::Up:
-            std::swap(cells[empty_cell.row][col_index], cells[empty_cell.row + 1][col_index]);
-            field.empty_cell.row++;
-            return;
-        case EMove::Down:
-            std::swap(cells[empty_cell.row][col_index], cells[empty_cell.row - 1][col_index]);
-            field.empty_cell.row--;
-            return;
-        default:
-            throw std::runtime_error("Unknown move: ");
-    };
+    const auto& move_struct = move_enum_to_struct.at(move);
+    const auto new_empty_cell = field.empty_cell + move_struct;
+    std::swap(field[field.empty_cell], field[new_empty_cell]);
+    field.empty_cell = new_empty_cell;
 }
 
 Field applyMove(const Field& field, EMove move)
@@ -238,29 +263,6 @@ std::vector<Field> getOneStepNeighbours(const Field& field)
     return result;
 }
 
-struct vertex_puz_state_t
-{
-    typedef boost::vertex_property_tag kind;
-};
-
-typedef boost::property<boost::vertex_color_t, boost::default_color_type,
-    boost::property<boost::vertex_rank_t, unsigned int,
-    boost::property<boost::vertex_distance_t, unsigned int,
-    boost::property<boost::vertex_predecessor_t, unsigned int,
-    boost::property<vertex_puz_state_t, Field> > > > > vert_prop;
-
-typedef boost::property<boost::edge_weight_t, unsigned int> edge_prop;
-
-//typedef adjacency_list<listS, vecS, undirectedS, vert_prop, edge_prop> mygraph_t;
-
-//typedef mygraph_t::vertex_descriptor vertex_t;
-//typedef mygraph_t::vertex_iterator vertex_iterator_t;
-//typedef property_map<mygraph_t, vertex_puz_state_t>::type StateMap;
-//typedef property_map<mygraph_t, edge_weight_t>::type WeightMap;
-//typedef property_map<mygraph_t, vertex_predecessor_t>::type PredMap;
-
-//using PuzzleGraph = boost::adjacency_list<boost::listS, boost::vecS, boost::undirectedS>;
-
 // visitor that terminates when we find the goal
 template <class Vertex>
 class AstarGoalVisitor : public boost::default_astar_visitor
@@ -269,16 +271,9 @@ public:
     template <class Graph>
     void examine_vertex(Vertex u, Graph&)
     {
-        //static int counter = 0;
-        //counter++;
-        //if (counter == 6)
-        //{
-            //throw FoundGoal();
-        //}
-        //std::cout << "Examining:\n" << u << std::endl;
-
         if (isEndState(static_cast<Vertex>(u)))
         {
+            std::cout << "Goal found" << std::endl;
             throw FoundGoal();
         }
     }
@@ -292,8 +287,6 @@ int distanceToGoal(const Field& field)
     {
         for (std::int32_t j = 0; j < side_size; j++)
         {
-            //std::cout << "sum: " << sum << std::endl;
-
             std::int32_t cell = field.cells[i][j];
             if (cell == 0)
             {
@@ -308,9 +301,8 @@ int distanceToGoal(const Field& field)
 }
 
 using Edge = std::pair<Field, EMove>;
-using EdgeSet = std::set<Edge>;
+using EdgeSet = std::vector<Edge>;
 using EdgeSetIteratorPtr = std::shared_ptr<EdgeSet::iterator>;
-using EdgeSetSharedPtr = std::shared_ptr<EdgeSet>;
 
 class OutEdgeIterator
 {
@@ -364,13 +356,11 @@ namespace std
 struct PuzzleStateSpace
 {
     typedef Field vertex_descriptor;
-    typedef std::pair<Field, EMove> edge_descriptor;
+    typedef Edge edge_descriptor;
     typedef boost::undirected_tag directed_category;
     typedef boost::disallow_parallel_edge_tag edge_parallel_category;
     typedef boost::incidence_graph_tag traversal_category;
 
-    //typedef edge_prop edge_property_type;
-    //typedef vert_prop vertex_property_type;
     typedef boost::no_property edge_property_type;
     typedef boost::no_property vertex_property_type;
 
@@ -431,16 +421,14 @@ PuzzleStateSpace::degree_size_type out_degree(const PuzzleStateSpace::vertex_des
     return getAvailableMoves(v).size();
 }
 
-std::pair<PuzzleStateSpace::out_edge_iterator, PuzzleStateSpace::out_edge_iterator>
+std::pair<OutEdgeIterator, OutEdgeIterator>
 out_edges(const PuzzleStateSpace::vertex_descriptor& v, const PuzzleStateSpace&)
 {
-    EdgeSetSharedPtr edge_set = std::make_shared<EdgeSet>();
+    auto edge_set = std::make_shared<EdgeSet>();
     for (const auto& move : getAvailableMoves(v))
     {
-        edge_set->insert(std::make_pair(v, move));
+        edge_set->emplace_back(v, move);
     }
-
-    //std::cout << "Set size: " << edge_set->size() << std::endl;
 
     return std::make_pair(
             OutEdgeIterator(EdgeSetIteratorPtr(edge_set, new EdgeSet::iterator(edge_set->begin()))),
@@ -462,8 +450,6 @@ public:
 
     V & operator[](K const& k)
     {
-        //std::cout << "Default map, key:\n" << k << std::endl;
-
         if (m.find(k) == m.end())
         {
             m[k] = defaultValue;
@@ -476,10 +462,57 @@ public:
     V const defaultValue;
 };
 
+//template <typename K, typename V>
+//class debug_map
+//{
+//public:
+    //typedef K key_type;
+    //typedef V data_type;
+    //typedef std::pair<K,V> value_type;
+
+    //V & operator[](K const& k)
+    //{
+        //std::cout << "Accessing\n" << k << "found: " << m.count(k) << " dist to goal: " << distanceToGoal(k) << "\n\n";
+
+        //return m[k];
+    //}
+
+    //const V& at(const K& k)
+    //{
+        //return m.at(k);
+    //}
+
+    //std::map<K,V> m;
+//};
+
 template <typename MapType>
 typename MapType::value_type get(const MapType& map, const PuzzleStateSpace::edge_descriptor& desc)
 {
     return map[desc];
+}
+
+EMove restoreMove(const Field& src, const Field& dst)
+{
+    auto move = dst.empty_cell - src.empty_cell;
+    try
+    {
+        auto enum_move = move_struct_to_enum.at(move);
+
+        if (!move.isLegal() || !(applyMove(src, enum_move) == dst))
+        {
+            std::cout << "Illegal move found\nSrc field:\n" << src << "Dst field\n" << dst
+                << "Move: " << enum_move << std::endl;
+
+            throw std::runtime_error("Illegal move");
+        }
+
+        return enum_move;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Error while restoring move: " << move << " : " << e.what() << std::endl;
+        throw;
+    }
 }
 
 int main(int argc, char** argv)
@@ -495,45 +528,34 @@ int main(int argc, char** argv)
     std::cout << state;
     std::cout << std::boolalpha << isEndState(state) << std::endl;
 
-    //std::cout << getAvailableMoves(state) << std::endl;
-    typedef boost::associative_property_map<default_map<Field, unsigned>> DistanceMap;
-    typedef default_map<Field, unsigned> WrappedDistanceMap;
-    WrappedDistanceMap wrappedMap = WrappedDistanceMap(200);
-    DistanceMap d = DistanceMap(wrappedMap);
+    for (const auto m : { EMove::Down, EMove::Right, EMove::Down, EMove::Left })
+    {
+        auto prev_state = state;
+        std::cout << "Applying move: " << m << std::endl;
+        applyMoveInPlace(state, m);
+        std::cout << state << "distance to goal: " << distanceToGoal(state) << std::endl;
+    }
 
-    applyMoveInPlace(state, EMove::Down);
-    wrappedMap[state] = distanceToGoal(state);
-    std::cout << state << "distance to goal: " << distanceToGoal(state) << std::endl;
-    auto prev_state = state;
-    applyMoveInPlace(state, EMove::Right);
-    std::cout << "State comparison: " << std::boolalpha << (prev_state < state) << " " << (state < prev_state) << std::endl;
-    wrappedMap[state] = distanceToGoal(state);
-    std::cout << state << "distance to goal: " << distanceToGoal(state) << std::endl;
-    applyMoveInPlace(state, EMove::Down);
-    wrappedMap[state] = distanceToGoal(state);
-    std::cout << state << "distance to goal: " << distanceToGoal(state) << std::endl;
-    applyMoveInPlace(state, EMove::Left);
-    wrappedMap[state] = distanceToGoal(state);
-    std::cout << state << "distance to goal: " << distanceToGoal(state) << std::endl;
-
-    //PuzzleGraph g;
-
-    PuzzleStateSpace space;
     auto initial_state = state;
 
-    std::map<Field, Field> pred_map;
-    boost::associative_property_map<std::map<Field, Field>> pred_property_map(pred_map);
+    using PredecessorMap = std::map<Field, Field>;
+    PredecessorMap pred_map;
+    boost::associative_property_map<PredecessorMap> pred_property_map(pred_map);
 
     std::map<Field, unsigned> vertex_index_map;
     std::map<Field, unsigned> rank_map;
     std::map<Field, boost::default_color_type> color_map;
 
+    typedef boost::associative_property_map<default_map<Field, unsigned>> DistanceMap;
+    typedef default_map<Field, unsigned> WrappedDistanceMap;
+    WrappedDistanceMap wrappedMap = WrappedDistanceMap(200);
+    DistanceMap d = DistanceMap(wrappedMap);
     wrappedMap[initial_state] = 0;
 
     try
     {
         boost::astar_search_no_init(
-                space,
+                PuzzleStateSpace(),
                 initial_state,
                 &distanceToGoal,
                 boost::predecessor_map(pred_property_map)
@@ -543,26 +565,26 @@ int main(int argc, char** argv)
                     .rank_map(boost::associative_property_map<std::map<Field, unsigned>>(rank_map))
                     .color_map(boost::associative_property_map<std::map<Field, boost::default_color_type>>(color_map))
                     .distance_map(d)
-                    .distance_compare(std::less<unsigned>())
-                    .distance_combine(std::plus<unsigned>())
+                    //.distance_compare(std::less<unsigned>())
+                    //.distance_combine(std::plus<unsigned>())
                     );
     }
     catch (const FoundGoal& g)
     {
-        //std::list<Field> moves;
-        //for (auto state = end_state; !(state == initial_state); )
-        //{
-            //const auto& mv = pred_map[state];
-            //moves.push_front(mv);
-            //state = mv;
-            ////applyMoveInPlace(state, revertMove(mv));
-        //}
-    }
+        std::cout << "\nRestoring moves\n";
+        std::list<EMove> moves;
 
-    std::cout << "Distance map" << std::endl;
-    for (const auto weight_pair : wrappedMap.m)
-    {
-        std::cout << weight_pair.first << "\n" << weight_pair.second << "\n";
+        for (auto state = end_state; state != initial_state; )
+        {
+            const auto& prev_state = pred_map.at(state);
+            auto m = restoreMove(prev_state, state);
+            moves.push_front(m);
+            state = prev_state;
+        }
+
+        std::cout << "Moves: ";
+        boost::copy(moves, std::ostream_iterator<EMove>(std::cout, ", "));
+        std::cout << std::endl;
     }
 
     return 0;
