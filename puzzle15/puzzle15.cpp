@@ -102,8 +102,6 @@ struct Field
 
     bool operator ==(const Field& other) const
     {
-        //std::cout << "Equal\n" << other;
-
         return boost::equal(cells, other.cells);
     }
 
@@ -158,26 +156,12 @@ std::ostream& operator <<(std::ostream& out, const EMove& m)
     }
 }
 
+const Field end_state = { {{{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 0}}}, {3, 3} };
+
 bool isEndState(const Field& field)
 {
-    int counter = 1;
-    for (auto i = 0u; i < field.cells.size(); i++)
-    {
-        const auto& row = field.cells[i];
-        auto row_len = i == 3 ? 3 : 4;
-        for (auto j = 0; j < row_len; j++, counter++)
-        {
-            if (counter != row[j])
-            {
-                return false;
-            }
-        }
-    }
-
-    return field.cells[field.empty_cell.row][field.empty_cell.col] == 0;
+    return field == end_state;
 }
-
-Field end_state = { {{{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 0}}}, {3, 3} };
 
 Field readField(std::istream& in)
 {
@@ -253,15 +237,6 @@ Field applyMove(const Field& field, EMove move)
 }
 
 struct FoundGoal {};
-
-std::vector<Field> getOneStepNeighbours(const Field& field)
-{
-    auto moves = getAvailableMoves(field);
-    std::vector<Field> result(moves.size(), field);
-    boost::for_each(result, moves, &applyMoveInPlace);
-
-    return result;
-}
 
 // visitor that terminates when we find the goal
 template <class Vertex>
@@ -461,29 +436,6 @@ public:
     std::map<K,V> m;
     V const defaultValue;
 };
-
-//template <typename K, typename V>
-//class debug_map
-//{
-//public:
-    //typedef K key_type;
-    //typedef V data_type;
-    //typedef std::pair<K,V> value_type;
-
-    //V & operator[](K const& k)
-    //{
-        //std::cout << "Accessing\n" << k << "found: " << m.count(k) << " dist to goal: " << distanceToGoal(k) << "\n\n";
-
-        //return m[k];
-    //}
-
-    //const V& at(const K& k)
-    //{
-        //return m.at(k);
-    //}
-
-    //std::map<K,V> m;
-//};
 
 template <typename MapType>
 typename MapType::value_type get(const MapType& map, const PuzzleStateSpace::edge_descriptor& desc)
