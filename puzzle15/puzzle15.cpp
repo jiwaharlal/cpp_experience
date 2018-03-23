@@ -560,7 +560,7 @@ int main(int argc, char** argv)
 
     typedef boost::associative_property_map<default_map<Field, unsigned>> DistanceMap;
     typedef default_map<Field, unsigned> WrappedDistanceMap;
-    WrappedDistanceMap wrappedMap = WrappedDistanceMap(200);
+    WrappedDistanceMap wrappedMap = WrappedDistanceMap(std::numeric_limits<unsigned>::max());
     DistanceMap d = DistanceMap(wrappedMap);
     wrappedMap[initial_state] = 0;
 
