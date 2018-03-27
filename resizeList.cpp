@@ -1,5 +1,6 @@
 #include <iostream>
 #include <list>
+#include <vector>
 
 struct SatelliteInfo
 {
@@ -9,6 +10,9 @@ struct SatelliteInfo
 
 int main(int, char**)
 {
+    std::vector<int> v;
+    std::cout << "Max size: " << v.max_size() << std::endl;
+
    std::list<int> intList;
    intList.resize(10);
 
