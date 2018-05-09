@@ -1,0 +1,1 @@
+/usr/bin/c++  -O3 -DNDEBUG  -rdynamic CMakeFiles/closestObject.dir/closestObject.cpp.o  -o closestObject -lbz2 -lexpat -lz -lpthread 

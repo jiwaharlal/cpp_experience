@@ -1,0 +1,3 @@
+/home/maxim/projects/cpp_experience/BoostLog/build/CMakeFiles/rebuild_cache.dir
+/home/maxim/projects/cpp_experience/BoostLog/build/CMakeFiles/edit_cache.dir
+/home/maxim/projects/cpp_experience/BoostLog/build/CMakeFiles/boostLog.dir

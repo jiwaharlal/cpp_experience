@@ -1,0 +1,46 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/maxim/projects/cpp_experience/boostPractice/src/practiceMain.cpp
+boost/bind.hpp
+-
+boost/chrono.hpp
+-
+boost/exception_ptr.hpp
+-
+boost/filesystem.hpp
+-
+boost/function.hpp
+-
+boost/fusion/container/vector.hpp
+-
+boost/fusion/include/sequence.hpp
+-
+boost/fusion/sequence.hpp
+-
+boost/lexical_cast.hpp
+-
+boost/make_shared.hpp
+-
+boost/range/algorithm.hpp
+-
+iostream
+-
+stdexcept
+-
+typeinfo
+-
+boost/coroutine/all.hpp
+-
+functional
+-
+iostream
+-
+boost/bind.hpp
+-
+

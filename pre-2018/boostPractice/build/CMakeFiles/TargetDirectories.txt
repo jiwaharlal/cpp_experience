@@ -1,0 +1,3 @@
+/home/maxim/projects/cpp_experience/boostPractice/build/CMakeFiles/rebuild_cache.dir
+/home/maxim/projects/cpp_experience/boostPractice/build/CMakeFiles/edit_cache.dir
+/home/maxim/projects/cpp_experience/boostPractice/build/CMakeFiles/boostPractice.dir
