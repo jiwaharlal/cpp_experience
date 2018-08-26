@@ -9,3 +9,6 @@ GpsReader/build
 heaps/build
 */build
 */release
+*/debug-build/*
+2018/SearchAlgos/debug-build/*
+2018/SearchAlgos/build/*
