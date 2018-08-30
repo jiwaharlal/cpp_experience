@@ -28,6 +28,20 @@ std::ostream& operator <<(std::ostream& out, const glm::dvec3& v)
     return out << "(" << v.x << ", " << v.y << ", " << v.z << ")";
 }
 
+bool isRightTurn(const glm::dvec3& v1, const glm::dvec3& v2)
+{
+    return v1.x * v2.z - v2.x * v1.z < 0.;
+}
+
+void testTurns()
+{
+    glm::dvec3 v1{1., 0., 1.};
+    glm::dvec3 v2{1., 0., 2.};
+
+    std::cout << "v1 -> v2: " << isRightTurn(v1, v2) << std::endl;
+    std::cout << "v2 -> v1: " << isRightTurn(v2, v1) << std::endl;
+}
+
 void testWithin()
 {
     glm::dvec3 p1{0., 0., 0.}, p2{0., 0., 1.}, p3{1., 0., 1.}, p4{1., 0., 0.};
@@ -68,7 +82,8 @@ int main()
     std::cout << "up : " << glm::cross(vec, up) << '\n';
     std::cout << "down : " << glm::cross(vec, down) << '\n';
 
-    testWithin();
+    //testWithin();
+    testTurns();
 
     return 0;
 }
