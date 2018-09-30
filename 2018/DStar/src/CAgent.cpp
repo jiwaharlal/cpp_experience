@@ -1,19 +1,25 @@
 #include "CAgent.hpp"
 
 CAgent::CAgent(
-        const Field& field,
-        const Point& position,
-        double visibility_radius,
-        const Point& goal)
-    : m_position(position)
+        const IntMat& field,
+        const cv::Point& position,
+        const cv::Point& goal,
+        std::int32_t visibility_radius)
+    : m_map(field)
+    , m_position(position)
     , m_goal(goal)
     , m_visibility_radius(visibility_radius)
 {
 }
 
-Point CAgent::getPosition() const
+cv::Point CAgent::getPosition() const
 {
     return m_position;
+}
+
+cv::Point CAgent::getGoal() const
+{
+    return m_goal;
 }
 
 double CAgent::getVisibilityRadius() const
@@ -21,19 +27,19 @@ double CAgent::getVisibilityRadius() const
     return m_visibility_radius;
 }
 
-const std::vector<Point>& CAgent::getPlannedPath() const
+const std::list<cv::Point>& CAgent::getPlannedPath() const
 {
     return m_path;
 }
 
-const Field& CAgent::getMap() const
+const IntMat& CAgent::getMap() const
 {
     return m_map;
 }
 
 void CAgent::move()
 {
-    if (!m_path.emtpty())
+    if (!m_path.empty())
     {
         m_position = m_path.front();
         m_path.pop_front();

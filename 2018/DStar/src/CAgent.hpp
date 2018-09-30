@@ -1,28 +1,33 @@
 #pragma once
 
+#include <list>
+
 #include "Field.hpp"
 
 class CAgent
 {
 public: // methods
     explicit CAgent(
-            const Field& field,
-            const Point& position,
-            double visibility_radius,
-            const Point& goal);
+            const IntMat& field,
+            const cv::Point& position,
+            const cv::Point& goal,
+            std::int32_t visibility_radius);
 
-    Point getPosition() const;
+    cv::Point getPosition() const;
+    cv::Point getGoal() const;
 
     double getVisibilityRadius() const;
 
-    const std::vector<Point>& getPlannedPath() const;
+    const std::list<cv::Point>& getPlannedPath() const;
 
-    const Field& getMap() const;
+    const IntMat& getMap() const;
 
     void move();
 
 private: // fields
-    Field m_field;
-    Point m_goal;
-    Point m_position;
+    IntMat m_map;
+    cv::Point m_position;
+    cv::Point m_goal;
+    std::int32_t m_visibility_radius;
+    std::list<cv::Point> m_path;
 };

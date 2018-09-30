@@ -5,7 +5,9 @@ set (CMAKE_CXX_STANDARD 11)
 find_package(OpenCV REQUIRED )
 
 add_executable(d-star
-    src/d-star.cpp)
+    src/d-star.cpp
+    src/CAgent.cpp
+    )
 
 target_link_libraries(d-star
     PRIVATE ${OpenCV_LIBS}
