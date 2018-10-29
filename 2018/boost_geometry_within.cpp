@@ -2,6 +2,7 @@
 #include <iterator>
 #include <vector>
 
+#include <boost/range/adaptors.hpp>
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/geometries.hpp>
 #include <boost/geometry/geometries/register/point.hpp>
@@ -52,7 +53,7 @@ int main()
     std::vector<glm::dvec2> intersections;
     bg::intersection(s, enter_cut, intersections);
 
-    std::cout << "Intersections: " << intersections << std::endl;
+    std::cout << "Intersections: " << boost::adaptors::format(intersections) << std::endl;
 
     intersections.front().x -= std::numeric_limits<double>::epsilon() * 2.;
     Linestring l{intersections.front(), s.second};

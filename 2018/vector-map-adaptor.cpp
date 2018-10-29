@@ -38,7 +38,6 @@ std::ostream& operator <<(std::ostream& out, const IntStringPair& p)
 
 int main()
 {
-
     auto start = std::chrono::high_resolution_clock::now();
     auto end = std::chrono::high_resolution_clock::now();
 
