@@ -42,6 +42,11 @@ ostream& operator <<(ostream& out, const vector<glm::dvec2>& v)
     return out;
 }
 
+ostream& operator <<(ostream& out, const Segment& s)
+{
+    return out << boost::tie(s.first, s.second);
+}
+
 }
 
 int main()
@@ -57,6 +62,13 @@ int main()
 
     intersections.front().x -= std::numeric_limits<double>::epsilon() * 2.;
     Linestring l{intersections.front(), s.second};
+    Linestring l2{{0., 0.}, {5., 5.}};
+    Linestring l3{{0., 5.}, {5., 0.}};
+
+    std::vector<Linestring> seg_intersections;
+    bg::intersection(l3, l2, seg_intersections);
+
+    std::cout << "seg_intersections: " << boost::adaptors::format(seg_intersections) << std::endl;
 
     std::cout << "Within: " << bg::within(l, r) << std::endl;
 
