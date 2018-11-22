@@ -16,11 +16,18 @@ struct Point
     double x, y;
 };
 
+struct Point3d
+{
+    double x, y, z;
+};
+
 BOOST_GEOMETRY_REGISTER_POINT_2D(Point, double, cs::cartesian, x, y);
+BOOST_GEOMETRY_REGISTER_POINT_3D(Point3d, double, cs::cartesian, x, y, z);
 
 using Linestring = bg::model::linestring<Point>;
 using Ring = bg::model::ring<Point>;
 using Polygon = bg::model::polygon<Point>;
+using Linestring3d = bg::model::linestring<Point3d>;
 
 Point parseWktPoint(const std::string& wkt_string)
 {
@@ -54,6 +61,18 @@ int main()
     //const std::string linestring_str = "LINESTRING(0 0,2 2,3 1)";
     const std::string ring_str = "POLYGON((1 2,1 3,2 3,2 2,1 2))";
 
+    std::string linestring3d = "LINESTRINGZ (8.887704763091843 53.03692919357177 \
+                                      4.479346456711435, 8.887711355150852 53.03695884706744 \
+                                      4.445304392678871, 8.88772043140585 53.03698709605212 \
+                                      4.427411977892825)";
+
+    static const auto z_offset = std::strlen("LINESTRING");
+    const auto pos = linestring3d.find("LINESTRINGZ");
+    linestring3d[pos + z_offset] = ' ';
+
+    Linestring3d line3d;
+    bg::read_wkt(linestring3d, line3d);
+    std::cout << "3d linestring: " << bg::wkt(line3d) << std::endl;
 
     std::string full_str = "Some [Context] message wkt_geometry{" + point_str + "}";
 
