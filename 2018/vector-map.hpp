@@ -6,7 +6,27 @@
 
 #include <boost/range/algorithm.hpp>
 
-template <typename T, typename Allocator>
+template <typename T> struct CompareFirst;
+
+template <typename T1, typename T2>
+struct CompareFirst<std::pair<T1, T2>>
+{
+    using value_type = std::pair<T1, T2>;
+    using reference = value_type&;
+    using const_reference = const value_type&;;
+
+    bool operator ()(const_reference lhs, const key_type& rhs)
+    {
+        return lhs.first < rhs;
+    }
+
+    bool operator ()(const key_type& lhs, const_reference rhs)
+    {
+        return lhs < rhs.first;
+    }
+};
+
+template <typename T, typename Comp, typename Allocator>
 class map_adaptor
 {
 public: // types
@@ -17,18 +37,6 @@ public: // types
     using const_reference = typename Range::const_reference;
 
 private:
-    struct KeyCompare
-    {
-        bool operator ()(const_reference lhs, const key_type& rhs)
-        {
-            return lhs.first < rhs;
-        }
-
-        bool operator ()(const key_type& lhs, const_reference rhs)
-        {
-            return lhs < rhs.first;
-        }
-    };
 
 public:
     explicit map_adaptor(const std::vector<T, Allocator>& v)

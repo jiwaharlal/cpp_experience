@@ -2,6 +2,11 @@
 #include <string>
 #include <vector>
 
+#include <boost/range/adaptors.hpp>
+#include <boost/range/algorithm.hpp>
+#include <boost/range/algorithm_ext.hpp>
+#include <boost/range/irange.hpp>
+
 struct P
 {
     P() { std::cout << "P::P()" << std::endl; }
@@ -61,6 +66,17 @@ int main()
     std::cout << "a: " << a << std::endl;
     std::cout << "a2: " << a2 << std::endl;
 
+    std::map<int, P> p_map = {{1, P{}}, {2, P{}}, {3, P{}}};
+    for (const auto i : boost::irange<std::int32_t>(4, 20))
+    {
+        p_map.emplace(i, P{});
+    }
+
+    std::cout << "\nTesting push_back:\n";
+    std::vector<P> ps;
+    boost::push_back(ps, boost::adaptors::values(p_map));
+    //boost::copy(boost::adaptors::values(p_map), std::back_inserter(ps));
+    std::cout << "\nEnd testing push_back\n\n";
 
     return 0;
 }
