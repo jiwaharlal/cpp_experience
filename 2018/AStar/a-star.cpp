@@ -105,7 +105,7 @@ void paintCell(cv::Mat& mat, const Grid& grid, const Point& p, cv::Scalar color)
     cv::fillConvexPoly(mat, points.begin(), 5, color);
 }
 
-void drawGrid(cv::Mat mat, const Grid& grid)
+void drawGrid(cv::Mat& mat, const Grid& grid)
 {
     const auto grid_color = cv::Scalar(200, 200, 200);
     const auto obstacle_color = cv::Scalar(150, 150, 150);
