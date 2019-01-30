@@ -40,7 +40,7 @@ cv::Point transformPoint(const glm::dvec2& point, const glm::dmat3& transform)
     const glm::dvec3 p_3d = {point.x, point.y, 0.};
     const auto transformed = transform * p_3d;
 
-    return {transformed.x, transformed.y};
+    return {static_cast<std::int32_t>(transformed.x), static_cast<std::int32_t>(transformed.y)};
 }
 
 void draw(cv::Mat& mat, const Field& field, const Tree& tree)
@@ -72,7 +72,7 @@ void draw(cv::Mat& mat, const Field& field, const Tree& tree)
             points.emplace_back(transformed.x, transformed.y);
         }
 
-        cv::fillConvexPoly(mat, points.data(), points.size(), {0xff, 0xff, 0});
+        cv::fillConvexPoly(mat, points.data(), points.size(), {0, 0xff, 0xff});
     }
 
     for (const auto& edge : tree.edges)
@@ -82,7 +82,7 @@ void draw(cv::Mat& mat, const Field& field, const Tree& tree)
 
         const auto src = transformPoint(p1, transform);
         const auto dst = transformPoint(p2, transform);
-        cv::line(mat, src, dst, {0xff, 0xff, 0}, 1);
+        cv::line(mat, src, dst, {0, 0xff, 0xff}, 1);
     }
 }
 
