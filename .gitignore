@@ -7,7 +7,7 @@ boostPractice/build
 GpsReader/build
 *.out
 heaps/build
-*/build
+**/build
 */release
 */debug-build/*
 2018/AStar/debug-build/*
