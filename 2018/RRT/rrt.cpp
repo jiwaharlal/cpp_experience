@@ -125,6 +125,16 @@ void addBranch(Tree& tree, const Field& field, double step_size)
     tree.edges.emplace_back(nearest_idx, tree.vertices.size() - 1);
 }
 
+void print(const Field& field, std::ostream& out)
+{
+    out << bg::wkt(field.box) << '\n';
+    out << field.obstacles.size() << '\n';
+    for (const auto& obstacle : field.obstacles)
+    {
+        out << bg::wkt(obstacle) << '\n';
+    }
+}
+
 int main()
 {
     std::srand(std::chrono::high_resolution_clock::now().time_since_epoch().count());
@@ -139,7 +149,10 @@ int main()
 
     Field field;
     field.box = Box{glm::dvec2{0., 0}, glm::dvec2{200., 200}};
-    //field.obstacles.push_back(Ring{{10., 10.}, {20., 10.}, {20., 20.}, {10., 20.}, {10., 10.}});
+    field.obstacles.push_back(Ring{{10., 10.}, {20., 10.}, {20., 20.}, {10., 20.}, {10., 10.}});
+    field.obstacles.push_back(Ring{{40., 40.}, {50., 40.}, {50., 50.}, {40., 50.}, {40., 40.}});
+
+    print(field, std::cout);
 
     glm::dvec2 robot_pos{1., 1.};
     glm::dvec2 goal{190., 190.};
