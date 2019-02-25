@@ -18,7 +18,6 @@ public:
     template <typename T, typename ... ArgTypes>
     T* allocate(ArgTypes ... args)
     {
-        //auto& last_chunk = m_chunks.back();
         if (sizeof(T) + m_chunk_pos >= m_chunk_size)
         {
             m_chunks.emplace_back(m_chunk_size, 0);
@@ -29,11 +28,6 @@ public:
         m_chunk_pos += sizeof(T);
 
         return obj;
-    }
-
-    void print()
-    {
-        std::cout << *(reinterpret_cast<std::string*>(m_chunks.back().data())) << std::endl;
     }
 
 private:
@@ -145,8 +139,6 @@ public:
 private:
     int m_level;
     int m_border;
-    //std::unique_ptr<LGTreeLeaf> m_l_branch;
-    //std::unique_ptr<LGTreeLeaf> m_g_branch;
     LGTreeLeaf* m_l_branch = nullptr;
     LGTreeLeaf* m_g_branch = nullptr;
     int m_g_count = 0;

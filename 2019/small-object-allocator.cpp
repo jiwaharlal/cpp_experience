@@ -45,5 +45,10 @@ int main()
     std::cout << *s << std::endl;
     al.print();
 
+    //delete s;
+    s->~basic_string();
+
+    al.print();
+
     return 0;
 }
