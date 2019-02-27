@@ -47,7 +47,7 @@ int main()
 
     std::vector<ValueType> existing_values;
 
-    //flat_map.reserve(map_size);
+    flat_map.reserve(map_size);
     for (std::int32_t i = 0; i < map_size; i++)
     {
         ValueType val = val_dist(re);
@@ -88,6 +88,9 @@ int main()
 
     search_time = getSearchTime(tree_map, new_values);
     std::cout << "Tree, time: " << search_time << std::endl;
+
+    //search_time = getSearchTime(flat_map, existing_values);
+    //std::cout << "Flat, time: " << search_time << std::endl;
 
     return 0;
 }
