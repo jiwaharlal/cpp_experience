@@ -4,49 +4,47 @@ if (NOT GTest_FOUND)
     return()
 endif()
 
+SET(GCC_COVERAGE_COMPILE_FLAGS "-fprofile-arcs -ftest-coverage --coverage")
+SET(GCC_COVERAGE_LINK_FLAGS    "-lgcov")
+
+SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}")
+SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_COVERAGE_LINK_FLAGS}")
+
 add_executable(testRing
-    testRing.cpp)
+    ../src/Ring.cpp
+    testRing.cpp
+    )
 
 target_link_libraries(testRing
+    #PRIVATE ring
     PRIVATE GTest::GTest
-    PRIVATE GTest::Main
+    #PRIVATE GTest::Main
     )
 
-add_executable(testRing2
-    testRing.cpp)
+#add_executable(testRing2
+    #testRing.cpp)
 
-target_link_libraries(testRing2
-    PRIVATE GTest::GTest
-    PRIVATE GTest::Main
-    )
+#target_link_libraries(testRing2
+    #PRIVATE GTest::GTest
+    #PRIVATE GTest::Main
+    #)
 
-#enable_testing()
-gtest_add_tests(testRing "" AUTO)
+#gtest_add_tests(testRing "" AUTO)
 
-set(TEST_RING testRing)
-
-#set(unit_tests "${TEST_RING} && ${TEST_RING}")
-
-add_custom_target(test1 ${TEST_RING})
-add_custom_target(test2 COMMAND testRing2 DEPENDS test1)
-
-set(TESTS testRing testRing2)
-
-list(LENGTH TESTS test_count)
-math(EXPR range_limit "${test_count} - 1")
-foreach(i RANGE ${range_limit})
-    list(GET TESTS ${i} elt)
-    message("${i}-th element: ${elt}")
-endforeach()
-
-foreach(t ${TESTS})
-    set(testTarget "test_target_${t}")
-    message("Target: ${testTarget}")
-endforeach()
-
-#gtest_discover_tests(testRing)
+gtest_discover_tests(testRing)
 
 #add_test(NAME RingTest COMMAND testRing)
 #add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND}
                   #DEPENDS testRing)
 
+#set(TEST_RING testRing)
+
+#set(TEST_EXECUTABLES testRing testRing2)
+
+#foreach(t ${TEST_EXECUTABLES})
+    #set(test_target "run_${t}")
+    #add_custom_target(${test_target} COMMAND ${t})
+    #list(APPEND TEST_TARGETS ${test_target})
+#endforeach()
+
+#add_custom_target(test DEPENDS ${TEST_TARGETS})
