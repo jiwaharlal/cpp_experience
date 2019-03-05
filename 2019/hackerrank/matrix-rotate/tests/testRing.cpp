@@ -5,24 +5,19 @@
 TEST(Ring, RingConstruction)
 {
     std::vector<std::vector<int>> m{{1, 2}, {3, 4}};
-    auto m2 = m;
+    const auto m2 = m;
+    CRing r{m, 0};
 
-    EXPECT_NE(m, m2);
+    EXPECT_EQ(m, m2);
 }
 
-void testConstructor()
+TEST(Ring, rotateCW)
 {
     std::vector<std::vector<int>> m{{1, 2}, {3, 4}};
-    auto m2 = m;
+    CRing r{m, 0};
+    r.rotateCW(1);
 
-    EXPECT_NE(m, m2);
-}
+    std::vector<std::vector<int>> m2{{3, 1}, {4, 2}};
 
-int main(int argc, char** argv)
-{
-    testing::InitGoogleTest(&argc, argv);
-
-    testConstructor();
-
-    return RUN_ALL_TESTS();
+    EXPECT_EQ(m, m2);
 }
