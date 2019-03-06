@@ -27,6 +27,12 @@ void CRing::rotateCW(int steps)
 {
     auto size_signed = static_cast<int>(m_chain.size());
     steps %= size_signed;
+
+    if (steps == 0)
+    {
+        return;
+    }
+
     std::vector<int> values;
     values.reserve(m_chain.size());
     for (const auto& link : m_chain)
