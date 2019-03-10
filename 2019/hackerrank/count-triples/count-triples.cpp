@@ -17,6 +17,19 @@ struct TripleIndices
     std::vector<int> third;
 };
 
+std::ostream& operator <<(std::ostream& out, const TripleIndices& t)
+{
+    for (const auto& v : {t.first, t.second, t.third})
+    {
+        for (auto i : v)
+        {
+            out << i << ' ';
+        }
+        out << '\n';
+    }
+    return out;
+}
+
 using TriplesMap = std::unordered_map<long, TripleIndices>;
 
 TriplesMap collectAppearances(const std::vector<long>& v, long r)
@@ -56,17 +69,17 @@ long countPossibleTriples(const TripleIndices& indices)
 {
     if (indices.first.empty() || indices.second.empty() || indices.third.empty())
         return 0l;
+    const auto& second = indices.second;
+    const auto& third = indices.third;
 
     long result = 0l;
     for (auto i1 : indices.first)
     {
-        const auto& second = indices.second;
         auto it2 = std::upper_bound(second.begin(), second.end(), i1);
 
         for (; it2 != second.end(); ++it2)
         {
             auto i2 = *it2;
-            const auto& third = indices.third;
             auto it3 = std::upper_bound(third.begin(), third.end(), i2);
 
             result += third.end() - it3;
@@ -78,8 +91,57 @@ long countPossibleTriples(const TripleIndices& indices)
 
 long countPossibleTriplesFast(const TripleIndices& indices)
 {
-    std::unordered_map<int, long> combinations_first;
-    std::unordered_map<int, long> combinations_second;
+    if (indices.first.empty() || indices.second.empty() || indices.third.empty())
+        return 0;
+
+    std::vector<std::pair<int, long>> combinations_first;
+    std::vector<std::pair<int, long>> combinations_second;
+    const auto& second = indices.second;
+    const auto& third = indices.third;
+
+    for (auto idx : indices.first)
+    {
+        combinations_first.emplace_back(idx, 0);
+    }
+    for (auto idx : indices.second)
+    {
+        combinations_second.emplace_back(idx, 0);
+    }
+
+    auto itemsGreaterInThird = [&](int value)
+    {
+        auto it = std::upper_bound(third.begin(), third.end(), value);
+        return third.end() - it;
+    };
+
+    combinations_second.back().second = itemsGreaterInThird(combinations_second.back().first);
+
+    for (int i = combinations_second.size() - 2; i >= 0; --i)
+    {
+        combinations_second[i].second =
+            itemsGreaterInThird(combinations_second[i].first) + combinations_second[i + 1].second;
+    }
+
+    auto combinationsGreaterInSecond = [&](int value)
+    {
+        auto it = std::upper_bound(
+                combinations_second.begin(),
+                combinations_second.end(),
+                std::make_pair(value, std::numeric_limits<long>::max()));
+
+        return it == combinations_second.end() ? 0 : it->second;
+    };
+
+    combinations_first.back().second =
+        combinationsGreaterInSecond(combinations_first.back().first);
+
+    for (int i = combinations_first.size() - 2; i >= 0; --i)
+    {
+        combinations_first[i].second =
+            combinationsGreaterInSecond(combinations_first[i].first) + combinations_first[i + 1].second;
+    }
+
+    return combinations_first.front().second;
 }
 
 long countTriplets(vector<long> arr, long r) {
@@ -88,7 +150,7 @@ long countTriplets(vector<long> arr, long r) {
     long result = 0;
     for (const auto indices_pair : value_indices)
     {
-        result += countPossibleTriples(indices_pair.second);
+        result += countPossibleTriplesFast(indices_pair.second);
     }
 
     return result;

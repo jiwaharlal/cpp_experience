@@ -48,10 +48,10 @@ int main()
     for (double x = 0; x < T; x += dT)
     {
         // plot position
-        //auto t = std::pow(x, 5) * params.a + std::pow(x, 4) * params.b + std::pow(x, 3) * params.c;
+        auto t = std::pow(x, 5) * params.a + std::pow(x, 4) * params.b + std::pow(x, 3) * params.c;
 
         // plot speed
-        auto t = 5 * params.a * pow(x, 4) + 4 * params.b * pow(x, 3) + 3 * params.c * pow(x, 2);
+        //auto t = 5 * params.a * pow(x, 4) + 4 * params.b * pow(x, 3) + 3 * params.c * pow(x, 2);
 
         // plot acceleration
         //auto t = 20 * params.a * pow(x, 3) + 12 * params.b * pow(x, 2) + 6 * params.c * x;
