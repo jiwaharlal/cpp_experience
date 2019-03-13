@@ -4,7 +4,7 @@ enable_testing()
 
 set (CMAKE_CXX_STANDARD 14)
 
-SET(GCC_COVERAGE_COMPILE_FLAGS "-g -fprofile-arcs -ftest-coverage --coverage")
+SET(GCC_COVERAGE_COMPILE_FLAGS "-g -fprofile-arcs -ftest-coverage --coverage -fPIC -O0")
 #SET(GCC_COVERAGE_LINK_FLAGS    "-lgcov")
 
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}")
