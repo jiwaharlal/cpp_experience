@@ -15,13 +15,12 @@ TEST(Ring, rotateCW)
 {
     std::vector<std::vector<int>> m{{1, 2}, {3, 4}};
     CRing r{m, 0};
-    //r.rotateCW(1);
 
     r.rotateCW(4);
-
-    //std::vector<std::vector<int>> m2{{3, 1}, {4, 2}};
-
     std::vector<std::vector<int>> m2{{1, 2}, {3, 4}};
-
     EXPECT_EQ(m, m2);
+
+    r.rotateCW(1);
+    std::vector<std::vector<int>> m3{{3, 1}, {4, 2}};
+    EXPECT_EQ(m, m3);
 }
