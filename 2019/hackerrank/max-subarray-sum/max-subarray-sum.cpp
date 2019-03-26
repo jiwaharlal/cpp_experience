@@ -10,7 +10,7 @@ vector<string> split_string(string);
 // Complete the maximumSum function below.
 long maximumSum(vector<long> a, long m) {
     std::vector<std::pair<long, int>> prefixes;
-    prefixes.reserve(m);
+    prefixes.reserve(a.size());
     prefixes.emplace_back(a[0] % m, 0);
 
     for (int i = 1; i < a.size(); ++i)
@@ -36,11 +36,38 @@ long maximumSum(vector<long> a, long m) {
             if (diff != 0)
             {
                 min_diff = std::min(min_diff, diff);
+                break;
             }
         }
     }
 
     return std::max(max_sum, m - min_diff);
+}
+
+long maxSumBruteSliding(const std::vector<long>& a, long m)
+{
+    long max_sum = 0l;
+    long initial_sliding_sum = 0l;
+    std::vector<long> mods;
+    mods.reserve(a.size());
+    std::transform(a.begin(), a.end(), std::back_inserter(mods), [m](long i){ return i % m; });
+
+    for (int len = 1; len <= a.size(); ++len)
+    {
+        initial_sliding_sum += mods[len - 1];
+        initial_sliding_sum %= m;
+        max_sum = std::max(max_sum, initial_sliding_sum);
+
+        long sliding_sum = initial_sliding_sum;
+        for (int i = len; i < a.size(); ++i)
+        {
+            sliding_sum += mods[i] + m - mods[i - len];
+            sliding_sum %= m;
+            max_sum = std::max(max_sum, sliding_sum);
+        }
+    }
+
+    return max_sum;
 }
 
 int main()
@@ -73,8 +100,14 @@ int main()
         }
 
         long result = maximumSum(a, m);
+        long brute_result = maxSumBruteSliding(a, m);
 
-        std::cout << result << "\n";
+        if (result != brute_result)
+        {
+            std::cout << "Brute: " << brute_result << std::endl;
+            std::cout << "Smart: " << result << "\n";
+            std::cout << "-----------------" << std::endl;
+        }
     }
 
     return 0;
