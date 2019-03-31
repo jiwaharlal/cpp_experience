@@ -2,6 +2,8 @@
 #include <vector>
 #include <queue>
 #include <algorithm>
+#include <set>
+#include <limits>
 
 using namespace std;
 
@@ -19,31 +21,38 @@ bool operator <(const SubSum& lhs, const SubSum& rhs)
     return lhs.min < rhs.min;
 }
 
+bool operator >(const SubSum& lhs, const SubSum& rhs)
+{
+    return lhs.min > rhs.min;
+}
+
 // Complete the riddle function below.
 vector<long> riddle(vector<long> arr) {
     // complete this function
     std::vector<SubSum> q;
     std::vector<long> result;
     result.reserve(arr.size());
-    result.push_back(*std::max_element(arr.begin(), arr.end()));
 
-    for (int i = 0, limit = arr.size() - 1; i < limit; ++i)
+    for (int i = 0, limit = arr.size(); i < limit; ++i)
     {
         q.push_back(SubSum{i, 1, arr[i]});
     }
+
     std::make_heap(q.begin(), q.end());
+    std::pop_heap(q.begin(), q.end());
+    result.push_back(q.back().min);
 
     for (int s = 2; s <= arr.size(); ++s)
     {
         while (true)
         {
-            std::pop_heap(q.begin(), q.end());
             auto& candidate = q.back();
 
             int limit = candidate.start + s;
             if (limit > arr.size())
             {
                 q.erase(std::prev(q.end()));
+                std::pop_heap(q.begin(), q.end());
                 continue;
             }
 
@@ -51,15 +60,66 @@ vector<long> riddle(vector<long> arr) {
             {
                 candidate.min = std::min(candidate.min, arr[i]);
             }
+            candidate.len = s;
 
             if (candidate.min >= q.front().min)
             {
                 result.push_back(candidate.min);
-                std::push_heap(q.begin(), q.end());
                 break;
             }
 
             std::push_heap(q.begin(), q.end());
+            std::pop_heap(q.begin(), q.end());
+        }
+    }
+
+    return result;
+}
+
+vector<long> riddleSet(vector<long> arr)
+{
+    using SetType = std::multiset<SubSum, std::greater<SubSum>>;
+    SetType q;
+    std::vector<long> result;
+    result.reserve(arr.size());
+
+    for (int i = 0; i < arr.size(); ++i)
+    {
+        q.insert(SubSum{i, 1, arr[i]});
+    }
+
+    result.push_back(q.begin()->min);
+
+    std::vector<SubSum> tmp;
+    for (int s = 2; s <= arr.size(); ++s)
+    {
+        long max_value = std::numeric_limits<long>::min();
+        for (SetType::iterator it = q.begin(); it != q.end(); ++it)
+        {
+            SubSum candidate = *it;
+            int limit = candidate.start + s;
+            if (limit > arr.size())
+            {
+                continue;
+            }
+
+            for (int i = candidate.start + candidate.len; i < limit; ++i)
+            {
+                candidate.min = std::min(candidate.min, arr[i]);
+            }
+            max_value = std::max(max_value, candidate.min);
+            candidate.len = s;
+            tmp.push_back(candidate);
+
+            auto next_it = std::next(it);
+            if (next_it == q.end() || candidate.min >= next_it->min)
+            {
+                result.push_back(max_value);
+                q.erase(q.begin(), next_it);
+                q.insert(tmp.begin(), tmp.end());
+                tmp.clear();
+                break;
+            }
         }
     }
 
