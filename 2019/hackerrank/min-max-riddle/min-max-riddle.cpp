@@ -1,9 +1,10 @@
-#include <iostream>
-#include <vector>
-#include <queue>
 #include <algorithm>
-#include <set>
+#include <iostream>
 #include <limits>
+#include <map>
+#include <queue>
+#include <set>
+#include <vector>
 
 using namespace std;
 
@@ -71,6 +72,46 @@ vector<long> riddle(vector<long> arr) {
             std::push_heap(q.begin(), q.end());
             std::pop_heap(q.begin(), q.end());
         }
+    }
+
+    return result;
+}
+
+std::vector<long> riddleRect(vector<long> h) {
+    std::map<int, int> starts;
+    std::vector<long> result(h.size(), std::numeric_limits<long>::min());
+    for (int i = 0; i < h.size(); ++i)
+    {
+        auto it = starts.lower_bound(h[i]);
+        if (it == starts.end())
+        {
+            starts.emplace(h[i], i);
+        }
+        else
+        {
+            if (it->first != h[i])
+            {
+                it = starts.emplace(h[i], it->second).first;
+            }
+
+            for (auto it2 = std::next(it); it2 != starts.end(); ++it2)
+            {
+                int wnd_size = i - it2->second;
+                result[wnd_size - 1] = std::max(result[wnd_size - 1], static_cast<long>(it2->first));
+            }
+            starts.erase(std::next(it), starts.end());
+        }
+    }
+
+    for (auto it2 = starts.begin(); it2 != starts.end(); ++it2)
+    {
+        int wnd_size = h.size() - it2->second;
+        result[wnd_size - 1] = std::max(result[wnd_size - 1], static_cast<long>(it2->first));
+    }
+
+    for (int i = result.size() - 2; i >= 0; --i)
+    {
+        result[i] = std::max(result[i], result[i + 1]);
     }
 
     return result;
@@ -145,7 +186,7 @@ int main()
         arr[i] = arr_item;
     }
 
-    vector<long> res = riddle(arr);
+    vector<long> res = riddleRect(arr);
 
     for (int i = 0; i < res.size(); i++) {
         std::cout << res[i];
