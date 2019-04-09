@@ -1,10 +1,12 @@
-#include <string>
 #include <chrono>
+#include <random>
+#include <string>
 #include <thread>
 
-#include <boost/geometry/geometries/register/point.hpp>
-#include <boost/geometry/geometries/box.hpp>
 #include <boost/geometry.hpp>
+#include <boost/geometry/geometries/box.hpp>
+#include <boost/geometry/geometries/register/point.hpp>
+#include <boost/range/algorithm.hpp>
 #include <boost/range/irange.hpp>
 #include <glm/glm.hpp>
 #include <opencv2/opencv.hpp>
@@ -43,7 +45,13 @@ cv::Point transformPoint(const glm::dvec2& point, const glm::dmat3& transform)
     return {static_cast<std::int32_t>(transformed.x), static_cast<std::int32_t>(transformed.y)};
 }
 
-void draw(cv::Mat& mat, const Field& field, const Tree& tree)
+void draw(
+        cv::Mat& mat,
+        const Field& field,
+        const Tree& tree,
+        const glm::dvec2& robot_pos,
+        const glm::dvec2& goal,
+        const std::vector<glm::dvec2>& path = {})
 {
     const auto& box = field.box;
     glm::dmat3 transition = {1., 0., -box.min_corner().x,
@@ -67,9 +75,7 @@ void draw(cv::Mat& mat, const Field& field, const Tree& tree)
 
         for (const auto& p : obstacle)
         {
-            const glm::dvec3 p_3d = {p.x, p.y, 0.};
-            const auto transformed = transform * p_3d;
-            points.emplace_back(transformed.x, transformed.y);
+            points.push_back(transformPoint(p, transform));
         }
 
         cv::fillConvexPoly(mat, points.data(), points.size(), {0, 0xff, 0xff});
@@ -84,6 +90,40 @@ void draw(cv::Mat& mat, const Field& field, const Tree& tree)
         const auto dst = transformPoint(p2, transform);
         cv::line(mat, src, dst, {0, 0xff, 0xff}, 1);
     }
+
+    cv::circle(mat, transformPoint(robot_pos, transform), 3, {0xff, 0, 0}, CV_FILLED);
+    cv::circle(mat, transformPoint(goal, transform), 3, {0, 0, 0xff}, CV_FILLED);
+
+    if (!path.empty())
+    {
+        std::vector<cv::Point> points;
+        points.reserve(path.size());
+        boost::transform(
+                path,
+                std::back_inserter(points),
+                [&](const glm::dvec2& p){ return transformPoint(p, transform); });
+        cv::polylines(mat, {points}, false, {0, 0, 0xff});
+    }
+}
+
+std::vector<glm::dvec2> extractPath(const Tree& tree)
+{
+    std::vector<glm::dvec2> points;
+    std::map<std::size_t, std::size_t> prev;
+    for (const auto& e : tree.edges)
+    {
+        prev.emplace(e.second, e.first);
+    }
+    for (auto cur = tree.edges.back().second; ; cur = prev[cur])
+    {
+        points.push_back(tree.vertices[cur]);
+        if (cur == 0u)
+        {
+            break;
+        }
+    }
+
+    return points;
 }
 
 glm::dvec2 getRandomPoint(const Box& box)
@@ -113,16 +153,57 @@ std::size_t findNearest(const Tree& tree, const glm::dvec2& point)
     return nearest_idx;
 }
 
-void addBranch(Tree& tree, const Field& field, double step_size)
+bool addBranch(Tree& tree, const Field& field, double step_size, const glm::dvec2& goal)
 {
-    auto rand_conf = getRandomPoint(field.box);
-    auto nearest_idx = findNearest(tree, rand_conf);
+    static double bias_to_goal = 0.05;
 
-    const auto src_vertex = tree.vertices[nearest_idx];
-    auto new_point = src_vertex + glm::normalize(rand_conf - src_vertex) * step_size;
+    static std::default_random_engine generator;
+    static std::uniform_real_distribution<double> distribution(0.0, 1.0);
 
-    tree.vertices.push_back(new_point);
-    tree.edges.emplace_back(nearest_idx, tree.vertices.size() - 1);
+    bool goal_riched = false;
+
+    while (true)
+    {
+        double number = distribution(generator);
+        bool is_step_to_goal = number <= bias_to_goal;
+
+        auto rand_conf = is_step_to_goal ? goal : getRandomPoint(field.box);
+        auto nearest_idx = findNearest(tree, rand_conf);
+
+        const auto src_vertex = tree.vertices[nearest_idx];
+
+        auto new_point = glm::distance(src_vertex, rand_conf) > step_size
+            ? src_vertex + glm::normalize(rand_conf - src_vertex) * step_size
+            : rand_conf;
+
+        goal_riched = is_step_to_goal && glm::distance(src_vertex, goal) < step_size;
+
+        // if intersects obstacle, generate different edge
+        bool intersects_obstacle = [&]()
+        {
+            for (const auto& obstacle : field.obstacles)
+            {
+                if (boost::geometry::intersects(obstacle, Segment{src_vertex, new_point}))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }();
+
+        if (intersects_obstacle)
+        {
+            continue;
+        }
+
+        tree.vertices.push_back(new_point);
+        tree.edges.emplace_back(nearest_idx, tree.vertices.size() - 1);
+
+        break;
+    }
+
+
+    return goal_riched;
 }
 
 void print(const Field& field, std::ostream& out)
@@ -139,34 +220,46 @@ int main()
 {
     std::srand(std::chrono::high_resolution_clock::now().time_since_epoch().count());
 
-    std::int32_t height = 480;
-    std::int32_t width = 640;
+    std::int32_t height = 800;
+    std::int32_t width = 800;
     std::string name = "grid";
 
     cv::Mat frame(cv::Mat::zeros(height, width, CV_8UC3));
-
-    //cv::line(frame, cv::Point2d{10., 10.}, cv::Point2d{500., 200.}, {0xff, 0, 0}, 2);
 
     Field field;
     field.box = Box{glm::dvec2{0., 0}, glm::dvec2{200., 200}};
     field.obstacles.push_back(Ring{{10., 10.}, {20., 10.}, {20., 20.}, {10., 20.}, {10., 10.}});
     field.obstacles.push_back(Ring{{40., 40.}, {50., 40.}, {50., 50.}, {40., 50.}, {40., 40.}});
+    field.obstacles.push_back(Ring{{0, 60}, {60, 60}, {60, 10}, {65, 10}, {65, 65}, {0, 65}, {0, 60}});
+    field.obstacles.push_back(Ring{{100, 0}, {105, 0}, {105, 105}, {10, 105}, {10, 100}, {100, 100}, {100, 0}});
 
     print(field, std::cout);
 
-    glm::dvec2 robot_pos{1., 1.};
+    glm::dvec2 robot_pos{5., 5.};
     glm::dvec2 goal{190., 190.};
 
     Tree tree;
-    tree.vertices.emplace_back(100, 100);
+    tree.vertices.push_back(robot_pos);
 
-    for (const auto i : boost::irange(0, 1000))
+    while (true)
     {
-        addBranch(tree, field, 5.);
-        draw(frame, field, tree);
+        auto goal_riched = addBranch(tree, field, 5., goal);
+
+        std::vector<glm::dvec2> path;
+        if (goal_riched)
+        {
+            path = extractPath(tree);
+        }
+
+        draw(frame, field, tree, robot_pos, goal, path);
         cv::imshow(name, frame);
         std::this_thread::sleep_for(std::chrono::milliseconds(3));
         cv::waitKey(1);
+
+        if (goal_riched)
+        {
+            break;
+        }
     }
 
     cv::waitKey(0);
