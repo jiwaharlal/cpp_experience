@@ -7,6 +7,7 @@
 #include <boost/geometry/geometries/box.hpp>
 #include <boost/geometry/geometries/register/point.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/range/algorithm_ext.hpp>
 #include <boost/range/irange.hpp>
 #include <glm/glm.hpp>
 #include <opencv2/opencv.hpp>
@@ -68,6 +69,7 @@ void draw(
 
     auto transform = scale * transition;
 
+    // draw obstacles
     for (const auto& obstacle : field.obstacles)
     {
         std::vector<cv::Point> points;
@@ -78,9 +80,11 @@ void draw(
             points.push_back(transformPoint(p, transform));
         }
 
-        cv::fillConvexPoly(mat, points.data(), points.size(), {0, 0xff, 0xff});
+        //cv::fillConvexPoly(mat, points.data(), points.size(), {0xff, 0xff, 0xff});
+        cv::fillConvexPoly(mat, points, {0xff, 0xff, 0xff});
     }
 
+    // draw tree edges
     for (const auto& edge : tree.edges)
     {
         const auto p1 = tree.vertices[edge.first];
@@ -91,9 +95,11 @@ void draw(
         cv::line(mat, src, dst, {0, 0xff, 0xff}, 1);
     }
 
+    // draw robot position and goal
     cv::circle(mat, transformPoint(robot_pos, transform), 3, {0xff, 0, 0}, CV_FILLED);
     cv::circle(mat, transformPoint(goal, transform), 3, {0, 0, 0xff}, CV_FILLED);
 
+    // draw path if it's not empty
     if (!path.empty())
     {
         std::vector<cv::Point> points;
@@ -179,17 +185,10 @@ bool addBranch(Tree& tree, const Field& field, double step_size, const glm::dvec
         goal_riched = is_step_to_goal && glm::distance(src_vertex, goal) < step_size;
 
         // if intersects obstacle, generate different edge
-        bool intersects_obstacle = [&]()
-        {
-            for (const auto& obstacle : field.obstacles)
-            {
-                if (boost::geometry::intersects(obstacle, Segment{src_vertex, new_point}))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }();
+        Linestring branch{src_vertex, new_point};
+        bool intersects_obstacle = std::any_of(
+                field.obstacles.begin(), field.obstacles.end(),
+                [&](const auto& o){ return bg::intersects(o, branch) || bg::crosses(o, branch); });
 
         if (intersects_obstacle)
         {
@@ -216,6 +215,20 @@ void print(const Field& field, std::ostream& out)
     }
 }
 
+Field createField()
+{
+    Field field;
+    field.box = Box{glm::dvec2{0., 0}, glm::dvec2{200., 200}};
+    field.obstacles.push_back(Ring{{10., 10.}, {20., 10.}, {20., 20.}, {10., 20.}, {10., 10.}});
+    field.obstacles.push_back(Ring{{40., 40.}, {50., 40.}, {50., 50.}, {40., 50.}, {40., 40.}});
+    field.obstacles.push_back(
+            Ring{{0, 60}, {60, 60}, {60, 10}, {65, 10}, {65, 65}, {0, 65}, {0, 60}});
+    field.obstacles.push_back(
+            Ring{{100, 0}, {105, 0}, {105, 105}, {10, 105}, {10, 100}, {100, 100}, {100, 0}});
+
+    return field;
+}
+
 int main()
 {
     std::srand(std::chrono::high_resolution_clock::now().time_since_epoch().count());
@@ -226,12 +239,7 @@ int main()
 
     cv::Mat frame(cv::Mat::zeros(height, width, CV_8UC3));
 
-    Field field;
-    field.box = Box{glm::dvec2{0., 0}, glm::dvec2{200., 200}};
-    field.obstacles.push_back(Ring{{10., 10.}, {20., 10.}, {20., 20.}, {10., 20.}, {10., 10.}});
-    field.obstacles.push_back(Ring{{40., 40.}, {50., 40.}, {50., 50.}, {40., 50.}, {40., 40.}});
-    field.obstacles.push_back(Ring{{0, 60}, {60, 60}, {60, 10}, {65, 10}, {65, 65}, {0, 65}, {0, 60}});
-    field.obstacles.push_back(Ring{{100, 0}, {105, 0}, {105, 105}, {10, 105}, {10, 100}, {100, 100}, {100, 0}});
+    Field field = createField();
 
     print(field, std::cout);
 
@@ -240,6 +248,11 @@ int main()
 
     Tree tree;
     tree.vertices.push_back(robot_pos);
+
+    draw(frame, field, tree, robot_pos, goal);
+    cv::imshow(name, frame);
+    cv::waitKey(1);
+    std::getchar();
 
     while (true)
     {
