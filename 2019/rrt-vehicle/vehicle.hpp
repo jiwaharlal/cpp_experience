@@ -12,7 +12,7 @@ struct Dimensions
 struct VehicleState
 {
     glm::dvec2 position;
-    double orientation; // Up (North) is zero, radians CCW
+    double orientation; // Angle between longitudinal axis of vehicle and x axis, radians CCW
     double steering; // Steering angle, longitudinal axis is zero, CCW, radians
     double speed; // m/s, positive is forward, negative is backward
 };

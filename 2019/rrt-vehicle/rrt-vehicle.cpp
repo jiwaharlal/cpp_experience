@@ -6,12 +6,14 @@
 #include <algorithm>
 
 #include <boost/algorithm/clamp.hpp>
+#include <boost/bind.hpp>
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/box.hpp>
 #include <boost/geometry/geometries/register/point.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
 #include <boost/range/adaptor/formatted.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/irange.hpp>
 #include <glm/glm.hpp>
 #include <opencv2/opencv.hpp>
@@ -56,14 +58,14 @@ Field createField()
 Vehicle initVehicle()
 {
     Vehicle v;
-    v.dimensions.length = 4.;
-    v.dimensions.width = 2.;
+    v.dimensions.length = 10.;
+    v.dimensions.width = 5.;
 
-    v.origin = {1., 2.};
+    v.origin = {1.5, 2.5};
 
     v.state.position = {100., 100.};
-    v.state.orientation = M_PI / 6;
-    v.state.steering = 0.; // 0.02;
+    v.state.orientation = M_PI / 6.;
+    v.state.steering = 0.;
 
     return v;
 }
@@ -81,7 +83,7 @@ std::ostream& operator <<(std::ostream& out, const cv::Point& p)
     return out << '(' << p.x << ", " << p.y << ')';
 }
 
-void draw(cv::Mat& mat, const Field& field, const Vehicle& v)
+glm::dmat3 createFieldTransform(const cv::Mat& mat, const Field& field)
 {
     const auto& box = field.box;
     auto transition = glm::transpose(glm::dmat3{
@@ -111,6 +113,30 @@ void draw(cv::Mat& mat, const Field& field, const Vehicle& v)
 
     transform = reflect * transition * transform;
 
+    return transform;
+}
+
+std::vector<glm::dvec2> getVehicleContour(const Vehicle& v)
+{
+    std::vector<glm::dvec2> vehicle_points = {
+        {0., 0.},
+        {0., v.dimensions.width},
+        {v.dimensions.length - v.dimensions.width / 4., v.dimensions.width},
+        {v.dimensions.length + v.dimensions.width / 4., v.dimensions.width / 2.},
+        {v.dimensions.length - v.dimensions.width / 4., 0.},
+        {0., 0.}};
+
+    for (auto& p : vehicle_points)
+    {
+        p -= v.origin;
+    }
+
+    return vehicle_points;
+}
+
+void draw(cv::Mat& mat, const Field& field, const Vehicle& v)
+{
+    auto transform = createFieldTransform(mat, field);
 
     // draw vehicle
     double orientation_angle = v.state.orientation; // + M_PI / 2.;
@@ -127,27 +153,32 @@ void draw(cv::Mat& mat, const Field& field, const Vehicle& v)
 
     glm::dmat3 vehicle_transform = transform * vehicle_transition * vehicle_rotation;
 
-    std::vector<glm::dvec2> vehicle_points = {
-        {0., 0.},
-        {0., v.dimensions.length - v.dimensions.width / 4.},
-        {v.dimensions.width / 2., v.dimensions.length + v.dimensions.width / 4.},
-        {v.dimensions.width, v.dimensions.length - v.dimensions.width / 4.},
-        {v.dimensions.width, 0.},
-        {0., 0.}};
-
-    std::vector<cv::Point> cv_vehicle_points;
-    cv_vehicle_points.reserve(vehicle_points.size());
-    boost::transform(
+    auto vehicle_points = getVehicleContour(v);
+    auto cv_range = boost::adaptors::transform(
             vehicle_points,
-            std::back_inserter(cv_vehicle_points),
-            [&](const auto& p){ return transformPoint(p - v.origin, vehicle_transform);});
+            [&](const auto& p){ return transformPoint(p, vehicle_transform);});
 
-    //std::cout << boost::adaptors::format(cv_vehicle_points) << std::endl;
+    std::vector<cv::Point> cv_vehicle_points(cv_range.begin(), cv_range.end());
 
     cv::fillConvexPoly(mat, cv_vehicle_points, {0xff, 0xff, 0xff});
 
     // draw vehicle origin
     cv::circle(mat, transformPoint({0., 0.}, vehicle_transform), 2, {0, 0, 0xff}, CV_FILLED);
+
+    // draw front wheels
+    glm::dvec2 left_wheel_center(v.dimensions.length * .8, v.dimensions.width * .9);
+    glm::dvec2 right_wheel_center(v.dimensions.length * .8, v.dimensions.width * .1);
+    double wheel_radius = v.dimensions.length * .1;
+
+    for (auto wheel_center : {left_wheel_center, right_wheel_center})
+    {
+        wheel_center -= v.origin;
+        auto offset = glm::dvec2{cos(v.state.steering), sin(v.state.steering)} * wheel_radius;
+        auto wheel_front = transformPoint(wheel_center + offset, vehicle_transform);
+        auto wheel_back = transformPoint(wheel_center - offset, vehicle_transform);
+
+        cv::line(mat, wheel_back, wheel_front, {0, 0, 0xff}, 2);
+    }
 }
 
 void moveVehicle(Vehicle& v, double meters, double delta_steering = 0.)
@@ -155,13 +186,15 @@ void moveVehicle(Vehicle& v, double meters, double delta_steering = 0.)
     double lr = v.origin.y;
     double lf = v.dimensions.length - v.origin.y;
 
-    double beta = std::atan2(lr * tan(v.state.steering), lr + lf);
+//    double beta = std::atan2(lr * tan(v.state.steering), lr + lf);
 
-    double dx = meters * -sin(v.state.orientation + beta);
-    double dy = meters * cos(v.state.orientation + beta);
+    double dx = meters * cos(v.state.orientation); // + beta);
+    double dy = meters * sin(v.state.orientation); // + beta);
 
-    double delta_orientation =
-        meters * std::sin(beta) / ((lr + lf) * std::tan(v.state.steering));
+    //double delta_orientation =
+        //meters * std::sin(beta) / ((lr + lf) * std::tan(v.state.steering));
+
+    double delta_orientation = std::atan2(meters * std::tan(v.state.steering), v.dimensions.length);
 
     v.state.position += glm::dvec2{dx, dy};
     v.state.orientation += delta_orientation;
@@ -208,7 +241,7 @@ int main()
         cv::Mat frame(cv::Mat::zeros(height, width, CV_8UC3));
         draw(frame, field, v);
         cv::imshow(name, frame);
-        std::this_thread::sleep_for(std::chrono::milliseconds(3));
+        std::this_thread::sleep_for(std::chrono::milliseconds(30));
 
         double delta_steering = 0.;
         int key = cv::waitKey(1);
@@ -222,7 +255,7 @@ int main()
         }
         moveVehicle(v, 0.5, delta_steering);
 
-        std::cout << static_cast<int>(key) << std::endl;
+        //std::cout << static_cast<int>(key) << std::endl;
     }
 
     cv::waitKey(0);

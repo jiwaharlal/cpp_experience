@@ -6,13 +6,16 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra -pg")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
-find_package(OpenCV REQUIRED)
+find_package(OpenCV 3.2 REQUIRED PATHS /usr/local)
 find_package(Boost REQUIRED)
 
 add_executable(rrt-vehicle
     rrt-vehicle.cpp)
 
+message("CV libs: ${OpenCV_LIBS}")
+message("CV include dirs: ${OpenCV_INCLUDE_DIRS}")
+
 target_link_libraries(rrt-vehicle
-    PRIVATE ${OpenCV_LIBS}
     PRIVATE Boost::boost
+    PRIVATE ${OpenCV_LIBS}
     )
