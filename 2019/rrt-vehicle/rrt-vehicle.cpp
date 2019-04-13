@@ -253,7 +253,7 @@ int main()
         {
             delta_steering = -0.01;
         }
-        moveVehicle(v, 0.5, delta_steering);
+        moveVehicle(v, -0.5, delta_steering);
 
         //std::cout << static_cast<int>(key) << std::endl;
     }
