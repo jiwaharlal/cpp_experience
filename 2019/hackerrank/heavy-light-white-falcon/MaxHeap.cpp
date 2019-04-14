@@ -1,0 +1,135 @@
+#include "MaxHeap.hpp"
+
+#include <algorithm>
+#include <limits>
+#include <stdexcept>
+
+namespace
+{
+
+bool isInRange(int i, const std::pair<int, int>& range)
+{
+    if (range.second < range.first)
+    {
+        throw std::runtime_error("Incorrect range");
+    }
+
+    return i >= range.first && i < range.second;
+}
+
+bool isInRange(const std::pair<int, int>& p, const std::pair<int, int>& range)
+{
+    if (range.second < range.first)
+    {
+        throw std::runtime_error("Incorrect range");
+    }
+
+    if (p.second < p.first)
+    {
+        throw std::runtime_error("Incorrect embedded range");
+    }
+
+    return p.first >= range.first && p.second <= range.second;
+}
+
+int maxIdx(int idx_1, int idx_2, const std::vector<int>& v)
+{
+    if (v[idx_1] < v[idx_2])
+    {
+        return idx_2;
+    }
+    return idx_1;
+}
+
+int levelBase(int level)
+{
+    return (1 << level) - 1;
+}
+
+} // unnamed namespace
+
+MaxHeap::MaxHeap(const std::vector<int>& arr)
+    : m_original_size(arr.size())
+{
+    int levels = 1;
+    for (int size = 1; size < arr.size(); size <<= 1, ++levels);
+
+    m_max_heap.resize(levelBase(levels), 0);
+
+    m_data.resize(1 << (levels - 1), std::numeric_limits<int>::min());
+    std::copy(arr.begin(), arr.end(), m_data.begin());
+
+    std::iota(m_max_heap.begin() + levelBase(levels - 1), m_max_heap.end(), 0);
+
+    for (int i = levelBase(levels - 1) - 1; i >= 0; --i)
+    {
+        int child_idx_1 = i * 2 + 1;
+        int child_idx_2 = child_idx_1 + 1;
+        m_max_heap[i] = maxIdx(m_max_heap[child_idx_1], m_max_heap[child_idx_2], m_data);
+    }
+
+    m_levels = levels;
+}
+
+void MaxHeap::update(int idx, int value)
+{
+    if (idx < 0 || idx >= m_original_size)
+    {
+        throw std::out_of_range("Index out or original size");
+    }
+
+    m_data[idx] = value;
+    int idx_base = levelBase(m_levels - 1);
+    int child_idx = idx_base + idx;
+
+    for (int l = m_levels - 2; l >= 0; --l)
+    {
+        int parent_idx = (child_idx - 1) / 2;
+        int child_idx_2 = parent_idx * 2 + 1 + child_idx % 2;
+
+        m_max_heap[parent_idx] = maxIdx(m_max_heap[child_idx], m_max_heap[child_idx_2], m_data);
+        child_idx = parent_idx;
+    }
+}
+
+int MaxHeap::getMaxInRange(int lo, int hi)
+{
+    int max_idx = getMaxIdxInRange(0, 0, lo, hi);
+    //int max_idx = getMaxIdxInRange(0, lo, hi, 0, (m_max_heap.size() + 1) / 2);
+    return m_data[max_idx];
+}
+
+int MaxHeap::getMaxIdxInRange(int level, int idx, int lo, int hi)
+{
+    int full_idx = levelBase(level) + idx;
+    int idx_max = m_max_heap[full_idx];
+
+    if (isInRange(idx_max, std::make_pair(lo, hi)))
+    {
+        return idx_max;
+    }
+
+    int left_child_idx = idx * 2;
+    int right_child_idx = left_child_idx + 1;
+
+    int level_diff = m_levels - level - 1;
+    int child_lo = idx << level_diff;
+    int child_mid = child_lo + (1 << (level_diff - 1));
+    int child_hi = (idx + 1) << level_diff;
+
+    if (isInRange(std::make_pair(lo, hi), std::make_pair(child_lo, child_mid)))
+    {
+        return getMaxIdxInRange(level + 1, left_child_idx, lo, hi);
+    }
+
+    if (isInRange(std::make_pair(lo, hi), std::make_pair(child_mid, child_hi)))
+    {
+        return getMaxIdxInRange(level + 1, right_child_idx, lo, hi);
+    }
+
+    int left_idx = getMaxIdxInRange(level + 1, left_child_idx, lo, child_mid);
+    int right_idx = getMaxIdxInRange(level + 1, right_child_idx, child_mid, hi);
+
+    return maxIdx(left_idx, right_idx, m_data);
+}
+
