@@ -7,31 +7,6 @@
 namespace
 {
 
-bool isInRange(int i, const std::pair<int, int>& range)
-{
-    if (range.second < range.first)
-    {
-        throw std::runtime_error("Incorrect range");
-    }
-
-    return i >= range.first && i < range.second;
-}
-
-bool isInRange(const std::pair<int, int>& p, const std::pair<int, int>& range)
-{
-    if (range.second < range.first)
-    {
-        throw std::runtime_error("Incorrect range");
-    }
-
-    if (p.second < p.first)
-    {
-        throw std::runtime_error("Incorrect embedded range");
-    }
-
-    return p.first >= range.first && p.second <= range.second;
-}
-
 int maxIdx(int idx_1, int idx_2, const std::vector<int>& v)
 {
     if (v[idx_1] < v[idx_2])
@@ -95,11 +70,16 @@ int MaxHeap::getMaxInRange(int lo, int hi)
     return m_data[max_idx];
 }
 
+int MaxHeap::getMaxIdxInRange(int lo, int hi)
+{
+    return getMaxIdxInRange(0, lo, hi, 0, (m_max_heap.size() + 1) / 2);
+}
+
 int MaxHeap::getMaxIdxInRange(int idx, int lo, int hi, int rng_lo, int rng_hi)
 {
     int idx_max = m_max_heap[idx];
 
-    if (isInRange(idx_max, std::make_pair(lo, hi)))
+    if (idx_max >= lo && idx_max < hi)
     {
         return idx_max;
     }

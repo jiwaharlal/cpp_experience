@@ -32,5 +32,16 @@ target_link_libraries(testSegmentTree
     PRIVATE gcov
     )
 
+add_executable(testSegmentTreeIB
+    testSegmentTreeIB.cpp
+    )
+
+target_link_libraries(testSegmentTreeIB
+    PRIVATE GTest::GTest
+    PRIVATE GTest::Main
+    PRIVATE gcov
+    )
+
 gtest_discover_tests(testMaxHeap)
 gtest_discover_tests(testSegmentTree)
+gtest_discover_tests(testSegmentTreeIB)

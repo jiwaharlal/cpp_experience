@@ -5,24 +5,28 @@
 
 #include "MaxHeap.hpp"
 #include "SegmentTreeMax.hpp"
+#include "TSegmentTreeIB.hpp"
 
 int main()
 {
     const int heaps_count = 100;
-    const int max_heap_size = 100000;
+    const int max_heap_size = 1000;
     const int max_value = 1000;
     const int query_count = 1000;
 
     long long total_std_time = 0l;
     long long total_heap_time = 0l;
+    long long total_template_heap_time = 0;
     long long total_st_time = 0l;
 
     for (int i = 0; i < heaps_count; ++i)
     {
-        std::vector<int> arr(1 + std::rand() % max_heap_size);
+        //std::vector<int> arr(1 + std::rand() % max_heap_size);
+        std::vector<int> arr(max_heap_size);
         std::generate(arr.begin(), arr.end(), [max_value](){ return std::rand() % max_value; });
         MaxHeap mh(arr);
         SegmentTreeMax st(arr);
+        TSegmentTreeIB<int, std::greater<int>> mhib(arr);
 
         for (int j = 0; j < query_count; ++j)
         {
@@ -45,6 +49,11 @@ int main()
                 st.update(idx, new_value);
                 end = std::chrono::high_resolution_clock::now();
                 total_st_time += (end - start).count();
+
+                start = std::chrono::high_resolution_clock::now();
+                mhib.update(idx, new_value);
+                end = std::chrono::high_resolution_clock::now();
+                total_template_heap_time += (end - start).count();
             }
             else
             {
@@ -69,7 +78,12 @@ int main()
                 end = std::chrono::high_resolution_clock::now();
                 total_st_time += (end - start).count();
 
-                if (m1 != m2 || m2 != m3)
+                start = std::chrono::high_resolution_clock::now();
+                int m4 = mhib.getTopInRange(lo, hi);
+                end = std::chrono::high_resolution_clock::now();
+                total_template_heap_time += (end - start).count();
+
+                if (m1 != m2 || m2 != m3 || m3 != m4)
                 {
                     throw std::runtime_error("Inconsistency in max values by different methods");
                 }
@@ -79,7 +93,8 @@ int main()
 
     std::cout << "Total std time : " << total_std_time << '\n'
               << "Total heap time: " << total_heap_time << '\n'
-              << "Total st time  : " << total_st_time << std::endl;
+              << "Total st time  : " << total_st_time << '\n'
+              << "Total mhib time: " << total_template_heap_time << std::endl;
 
     return 0;
 }

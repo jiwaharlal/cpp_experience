@@ -11,7 +11,9 @@ public:
 
     int getMaxInRange(int lo, int hi);
 
-    //int getMaxIdxInRange(int level, int idx, int lo, int hi);
+    int getMaxIdxInRange(int lo, int hi);
+
+private: // methods
     int getMaxIdxInRange(int idx, int lo, int hi, int rng_lo, int rng_hi);
 
 private:
