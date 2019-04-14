@@ -35,7 +35,7 @@ void SegmentTreeMax::update(int idx, int value)
     int child_idx = idx + m_max_heap.size() / 2;
     m_max_heap[child_idx] = value;
 
-    for (; child_idx != 0; )
+    while (child_idx != 0)
     {
         int parent_idx = (child_idx - 1) / 2;
         int child_idx_2 = parent_idx * 2 + 1 + child_idx % 2;
@@ -67,12 +67,11 @@ int SegmentTreeMax::getMaxInRangePriv(
         return getMaxInRangePriv(lo, hi, child_idx_1, rng_lo, rng_mid);
     }
 
-    int child_idx_2 = rng_max_idx * 2 + 2;
+    int child_idx_2 = child_idx_1 + 1;
     if (lo >= rng_mid)
     {
         return getMaxInRangePriv(lo, hi, child_idx_2, rng_mid, rng_hi);
     }
-
 
     return std::max(
         getMaxInRangePriv(lo, rng_mid, child_idx_1, rng_lo, rng_mid),

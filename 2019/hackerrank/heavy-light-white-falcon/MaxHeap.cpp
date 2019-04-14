@@ -67,8 +67,6 @@ MaxHeap::MaxHeap(const std::vector<int>& arr)
         int child_idx_2 = child_idx_1 + 1;
         m_max_heap[i] = maxIdx(m_max_heap[child_idx_1], m_max_heap[child_idx_2], m_data);
     }
-
-    m_levels = levels;
 }
 
 void MaxHeap::update(int idx, int value)
@@ -79,10 +77,9 @@ void MaxHeap::update(int idx, int value)
     }
 
     m_data[idx] = value;
-    int idx_base = levelBase(m_levels - 1);
-    int child_idx = idx_base + idx;
+    int child_idx = idx + m_max_heap.size() / 2;
 
-    for (int l = m_levels - 2; l >= 0; --l)
+    while (child_idx != 0)
     {
         int parent_idx = (child_idx - 1) / 2;
         int child_idx_2 = parent_idx * 2 + 1 + child_idx % 2;
@@ -94,41 +91,37 @@ void MaxHeap::update(int idx, int value)
 
 int MaxHeap::getMaxInRange(int lo, int hi)
 {
-    int max_idx = getMaxIdxInRange(0, 0, lo, hi);
-    //int max_idx = getMaxIdxInRange(0, lo, hi, 0, (m_max_heap.size() + 1) / 2);
+    int max_idx = getMaxIdxInRange(0, lo, hi, 0, (m_max_heap.size() + 1) / 2);
     return m_data[max_idx];
 }
 
-int MaxHeap::getMaxIdxInRange(int level, int idx, int lo, int hi)
+int MaxHeap::getMaxIdxInRange(int idx, int lo, int hi, int rng_lo, int rng_hi)
 {
-    int full_idx = levelBase(level) + idx;
-    int idx_max = m_max_heap[full_idx];
+    int idx_max = m_max_heap[idx];
 
     if (isInRange(idx_max, std::make_pair(lo, hi)))
     {
         return idx_max;
     }
 
-    int left_child_idx = idx * 2;
+    int left_child_idx = idx * 2 + 1;
+
+    int rng_mid = rng_lo + (rng_hi - rng_lo) / 2;
+
+    if (std::min(m_original_size, hi) <= rng_mid)
+    {
+        return getMaxIdxInRange(left_child_idx, lo, hi, rng_lo, rng_mid);
+    }
+
     int right_child_idx = left_child_idx + 1;
 
-    int level_diff = m_levels - level - 1;
-    int child_lo = idx << level_diff;
-    int child_mid = child_lo + (1 << (level_diff - 1));
-    int child_hi = (idx + 1) << level_diff;
-
-    if (isInRange(std::make_pair(lo, hi), std::make_pair(child_lo, child_mid)))
+    if (lo >= rng_mid)
     {
-        return getMaxIdxInRange(level + 1, left_child_idx, lo, hi);
+        return getMaxIdxInRange(right_child_idx, lo, hi, rng_mid, rng_hi);
     }
 
-    if (isInRange(std::make_pair(lo, hi), std::make_pair(child_mid, child_hi)))
-    {
-        return getMaxIdxInRange(level + 1, right_child_idx, lo, hi);
-    }
-
-    int left_idx = getMaxIdxInRange(level + 1, left_child_idx, lo, child_mid);
-    int right_idx = getMaxIdxInRange(level + 1, right_child_idx, child_mid, hi);
+    int left_idx = getMaxIdxInRange(left_child_idx, lo, hi, rng_lo, rng_mid);
+    int right_idx = getMaxIdxInRange(right_child_idx, lo, hi, rng_mid, rng_hi);
 
     return maxIdx(left_idx, right_idx, m_data);
 }
