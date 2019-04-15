@@ -4,259 +4,14 @@
 #include <queue>
 #include <map>
 
+#include "TSegmentTreeIB.hpp"
+
 using namespace std;
 
 vector<string> split_string(string);
 
 // Complete the solve function below.
 using AdjList = std::vector<std::vector<int>>;
-
-//int maxIdx(int idx_1, int idx_2, const std::vector<int>& v)
-//{
-    //if (v[idx_1] < v[idx_2])
-    //{
-        //return idx_2;
-    //}
-    //return idx_1;
-//}
-
-//int levelBase(int level)
-//{
-    //return (1 << level) - 1;
-//}
-
-//class MaxHeap
-//{
-//public:
-    //explicit MaxHeap(const std::vector<int>& arr)
-        //: m_original_size(arr.size())
-    //{
-        //int levels = 1;
-        //for (int size = 1; size < arr.size(); size <<= 1, ++levels);
-
-        //m_max_heap.resize(levelBase(levels), 0);
-
-        //m_data.resize(1 << (levels - 1), std::numeric_limits<int>::min());
-        //std::copy(arr.begin(), arr.end(), m_data.begin());
-
-        //for (int i = 0, j = levelBase(levels - 1); i < m_data.size(); ++i, ++j)
-        //{
-            //m_max_heap[j] = i;
-        //}
-
-        //for (int i = levelBase(levels - 1); i >= 0; --i)
-        //{
-            //int child_idx_1 = i * 2 + 1;
-            //int child_idx_2 = child_idx_1 + 1;
-            //m_max_heap[i] = maxIdx(m_max_heap[child_idx_1], m_max_heap[child_idx_2], m_data);
-        //}
-
-        //m_levels = levels;
-    //}
-
-    //void update(int idx, int value)
-    //{
-        //if (idx < 0 || idx >= m_original_size)
-        //{
-            //throw std::out_of_range("Index out or original size");
-        //}
-
-        //int idx_base = levelBase(m_levels - 1);
-        //int child_idx = idx_base + idx;
-
-        //for (int l = m_levels - 2; l >= 0; --l)
-        //{
-            //int parent_idx = (child_idx - 1) / 2;
-            //int child_idx_2 = parent_idx * 2 + 1 + child_idx % 2;
-
-            //int new_max_idx = maxIdx(m_max_heap[child_idx], m_max_heap[child_idx_2], m_data);
-            //if (new_max_idx == m_max_heap[parent_idx])
-            //{
-                //break;
-            //}
-
-            //m_max_heap[parent_idx] = new_max_idx;
-            //child_idx = parent_idx;
-        //}
-    //}
-
-    //int getMaxInRange(int lo, int hi)
-    //{
-        //int max_idx = getMaxIdxInRange(0, 0, lo, hi);
-        //return max_idx;
-    //}
-
-    //int getMaxIdxInRange(int level, int idx, int lo, int hi)
-    //{
-        //int full_idx = levelBase(level) + idx;
-        //int idx_max = m_max_heap[full_idx];
-
-        //if (isInRange(idx_max, std::make_pair(lo, hi)))
-        //{
-            //return idx_max;
-        //}
-
-        //int left_child_idx = idx * 2;
-        //int right_child_idx = left_child_idx + 1;
-
-        //int level_diff = m_levels - level;
-        //int child_lo = idx << level_diff;
-        //int child_mid = child_lo + (1 << (level_diff / 2));
-        //int child_hi = (idx + 1) << level_diff;
-
-        //if (isInRange(std::make_pair(lo, hi), std::make_pair(child_lo, child_mid)))
-        //{
-            //return getMaxIdxInRange(level + 1, left_child_idx, lo, hi);
-        //}
-
-        //if (isInRange(std::make_pair(lo, hi), std::make_pair(child_mid, child_hi)))
-        //{
-            //return getMaxIdxInRange(level + 1, right_child_idx, lo, hi);
-        //}
-
-        //int left_idx = getMaxIdxInRange(level + 1, left_child_idx, lo, child_mid);
-        //int right_idx = getMaxIdxInRange(level + 1, right_child_idx, child_mid, hi);
-
-        //return maxIdx(left_idx, right_idx, m_data);
-    //}
-
-//private:
-    //int m_levels;
-    //int m_original_size;
-    //std::vector<int> m_data;
-    //std::vector<int> m_max_heap;
-//};
-
-//std::vector<int> makeMaxHeap(const std::vector<int>& arr)
-//{
-    //int size_2 = 1;
-    //for (; size_2 < arr.size(); size_2 <<= 1);
-    //std::vector<int> result;
-    //result.reserve(size_2 * 2);
-    //for (int i = 0; i < size_2; ++i)
-    //{
-        //result.push_back(i);
-    //}
-
-    //std::vector<int> v(size_2, std::numeric_limits<int>::min());
-    //std::copy(arr.begin(), arr.end(), v.begin());
-
-    //int base = 0;
-    //for (int level = 1; ; ++level)
-    //{
-        //int limit = size_2 << level;
-        //for (int i = 0; i < limit; ++i)
-        //{
-            //int idx_1 = result[base + i * 2];
-            //int idx_2 = result[base + i * 2 + 1];
-
-            //auto p1 = std::make_pair(v[idx_1], idx_1);
-            //auto p2 = std::make_pair(v[idx_2], idx_2);
-            //auto idx = std::max(p1, p2).second;
-
-            //result.push_back(idx);
-        //}
-
-        //if (limit == 1)
-        //{
-            //break;
-        //}
-        //base += limit;
-    //}
-
-    //return result;
-//}
-
-//struct HeapNode
-//{
-    //int lo_idx;
-    //int hi_idx;
-    //int max_idx;
-    //HeapNode* left;
-    //HeapNode* right;
-//};
-
-//class MaxHeap
-//{
-//public:
-    //explicit MaxHeap(const std::vector<int> data)
-        //: m_data(data)
-        //, m_max_heap(makeMaxHeap(data))
-    //{
-        //int levels = 1;
-        //for (int i = 1; i < data.size(); i <<= 1, ++levels);
-        //m_levels = levels;
-    //}
-
-    //const std::vector<int>& data() const { return m_data; }
-
-    //void update(int idx, int value)
-    //{
-        //m_data[idx] = value;
-
-        //int low_offset = 0;
-        //int hi_offset = 1 << m_levels;
-
-        //for (int level = 1; level < m_levels; ++level)
-        //{
-
-        //}
-    //}
-
-    //int getMaxInRange(int lo, int hi)
-    //{
-        //return getMaxInRangePriv(m_levels - 1, 0, lo, hi);
-    //}
-
-//private:
-    //int getMaxInRangePriv(int level, int idx, int lo, int hi)
-    //{
-        //int base = 0;
-        //for (int l = 0; l < level; ++l)
-        //{
-            //base <<= 1;
-            //base += 1;
-        //}
-        //for (int l = level; l < m_levels; ++l)
-        //{
-            //base <<= 1;
-        //}
-
-        //int max_idx = m_max_heap[idx];
-        //if (max_idx <= hi && max_idx >= lo)
-        //{
-            //return max_idx;
-        //}
-
-        //int child_begin = idx << level;
-        //int child_mid = ((idx << 1) + 1) << (level - 1);
-        //int child_end = (idx + 1) << level;
-
-        //if (hi < child_mid)
-        //{
-            //return getMaxInRangePriv(level - 1, idx << 1, lo, hi);
-        //}
-
-        //if (lo >= child_mid)
-        //{
-            //return getMaxInRangePriv(level - 1, (idx << 1) + 1, lo, hi);
-        //}
-
-        //int idx1 = getMaxInRangePriv(level - 1, idx << 1, lo, hi);
-        //int idx2 = getMaxInRangePriv(level - 1, (idx << 1) + 1, lo, hi);
-
-        //auto p1 = std::make_pair(m_data[idx1], idx1);
-        //auto p2 = std::make_pair(m_data[idx2], idx2);
-
-        //return std::max(p1, p2).second;
-    //}
-
-//private: // fields
-    //std::vector<int> m_data;
-    //std::vector<int> m_max_heap;
-    //int m_levels;
-//};
-
 
 std::vector<int> findPath(const AdjList& adj, int src, int dst)
 {
@@ -297,8 +52,10 @@ std::vector<int> findPath(const AdjList& adj, int src, int dst)
     return result;
 }
 
-vector<int> solve(vector<vector<int>> tree, vector<vector<int>> queries) {
-    vector<int> result;
+AdjList buildGraph(const std::vector<std::vector<int>>& tree)
+{
+    AdjList adj;
+
     int last_vertex = std::accumulate(
         tree.begin(),
         tree.end(),
@@ -306,14 +63,22 @@ vector<int> solve(vector<vector<int>> tree, vector<vector<int>> queries) {
         [](auto m, const auto& branch)
             { return std::max(m, std::max(branch[0], branch[1])); });
     int tree_size = last_vertex + 1;
-    AdjList adj(tree_size);
+    adj.resize(tree_size);
     for (const auto& edge : tree)
     {
         adj[edge[0]].push_back(edge[1]);
         adj[edge[1]].push_back(edge[0]);
     }
 
-    std::vector<int> values(tree_size, 0);
+    return adj;
+}
+
+vector<int> solve(vector<vector<int>> tree, vector<vector<int>> queries) {
+    vector<int> result;
+
+    auto adj = buildGraph(tree);
+
+    std::vector<int> values(adj.size(), 0);
     for (const auto& q : queries)
     {
         if (q[0] == 1)
@@ -331,6 +96,164 @@ vector<int> solve(vector<vector<int>> tree, vector<vector<int>> queries) {
             result.push_back(max_value);
         }
     }
+
+    return result;
+}
+
+// as a result, 0-th vertex is a root, for each vertex last adj.back() is a parent,
+// and for 0-th vertex parent = 0
+std::vector<int> transformToTree(AdjList& adj)
+{
+    std::vector<int> ranks(adj.size(), -1);
+    adj[0].push_back(0);
+    ranks[0] = 0;
+    std::vector<int> stack;
+
+    stack.push_back(0);
+
+    while (!stack.empty())
+    {
+        int cur = stack.back();
+        stack.pop_back();
+
+        auto& children = adj[cur];
+        for (int i = 0, last = children.size() - 1; i != last; ++i)
+        {
+            auto child = children[i];
+            auto& child_adj = adj[child];
+
+            if (adj[child].back() != cur)
+            {
+                std::swap(child_adj.back(), *std::find(child_adj.begin(), child_adj.end(), cur));
+            }
+
+            stack.push_back(child);
+            ranks[child] = ranks[cur] + 1;
+        }
+    }
+
+    return ranks;
+}
+
+std::vector<int> eulerWalk(const AdjList& adj)
+{
+    std::vector<int> visit_order;
+    visit_order.reserve(adj.size());
+    std::vector<int> last_direction(adj.size(), -1);
+
+    for (int cur = 0; ; )
+    {
+        visit_order.push_back(cur);
+        ++last_direction[cur];
+        int next = adj[cur][last_direction[cur]];
+
+        if (cur == next)
+        {
+            break;
+        }
+        cur = next;
+    }
+
+    return visit_order;
+}
+
+using MinSegmentTree = TSegmentTreeIB<int, std::less<int>>;
+
+int minIdxInRange(const MinSegmentTree& st, int lo, int hi)
+{
+    return st.getTopIdxInRange(lo, hi);
+}
+
+int minIdxInRange(const std::vector<int>& v, int lo, int hi)
+{
+    return std::min_element(v.begin() + lo, v.begin() + hi) - v.begin();
+}
+
+std::vector<int> pathToParent(int child, int parent, const AdjList& adj)
+{
+    std::vector<int> result;
+    for (int cur = child; cur != parent; cur = adj[cur].back())
+    {
+        result.push_back(cur);
+    }
+    return result;
+}
+
+template <typename VisitedRanks>
+std::vector<int> findTreePath(
+        const AdjList& adj,
+        const std::vector<int>& visit_order,
+        const VisitedRanks& visited_ranks,
+        const std::vector<int>& vertex_visits,
+        int u,
+        int v)
+{
+    std::vector<int> result;
+
+    auto visits = std::minmax(vertex_visits[u], vertex_visits[v]);
+    auto parent_visit_idx = minIdxInRange(visited_ranks, visits.first, visits.second + 1);
+    int parent = visit_order[parent_visit_idx];
+
+    result = pathToParent(u, parent, adj);
+    auto path_v = pathToParent(v, parent, adj);
+    result.reserve(result.size() + path_v.size() + 1);
+    result.push_back(parent);
+    std::copy(path_v.rbegin(), path_v.rend(), std::back_inserter(result));
+
+    return result;
+}
+
+vector<int> solveST(vector<vector<int>> tree, vector<vector<int>> queries)
+{
+    vector<int> result;
+    auto adj = buildGraph(tree);
+
+    auto ranks = transformToTree(adj);
+
+    auto visit_order = eulerWalk(adj);
+
+    std::vector<int> last_visits(adj.size());
+    std::vector<int> visited_ranks;
+    visited_ranks.reserve(visit_order.size());
+    for (int i = 0; i < visit_order.size(); ++i)
+    {
+        last_visits[visit_order[i]] = i;
+        visited_ranks.push_back(ranks[visit_order[i]]);
+    }
+
+    std::vector<int> values(adj.size(), 0);
+    MinSegmentTree visited_ranks_st(visited_ranks);
+    for (const auto& q : queries)
+    {
+        if (q[0] == 1)
+        {
+            values[q[1]] = q[2];
+        }
+        else
+        {
+            auto path = findTreePath(adj, visit_order, visited_ranks_st, last_visits, q[1], q[2]);
+            int max_value = 0;
+            for (int i : path)
+            {
+                max_value = std::max(max_value, values[i]);
+            }
+            result.push_back(max_value);
+        }
+    }
+
+    return result;
+}
+
+vector<int> solveHLD(vector<vector<int>> tree, vector<vector<int>> queries)
+{
+    vector<int> result;
+
+    auto adj = buildGraph(tree);
+    auto ranks = transformToTree(adj);
+    auto hld = hlDecompose(adj);
+
+    auto hldAdj = getHldAdjacency(hld, adj);
+    auto hdlRanks = transformToTree(hldAdj);
 
     return result;
 }
@@ -368,16 +291,16 @@ int main()
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
     }
 
-    vector<int> result = solve(tree, queries);
+    vector<int> result = solveST(tree, queries);
 
-    //for (int result_itr = 0; result_itr < result.size(); result_itr++) {
-        //std::cout << result[result_itr];
+    for (int result_itr = 0; result_itr < result.size(); result_itr++) {
+        std::cout << result[result_itr];
 
-        //if (result_itr != result.size() - 1) {
-            //std::cout << "\n";
-        //}
-    //}
-    std::cout << "done";
+        if (result_itr != result.size() - 1) {
+            std::cout << "\n";
+        }
+    }
+    //std::cout << "done";
 
     std::cout << "\n";
 
