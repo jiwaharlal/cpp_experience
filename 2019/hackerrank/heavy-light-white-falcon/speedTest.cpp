@@ -10,7 +10,7 @@
 int main()
 {
     const int heaps_count = 100;
-    const int max_heap_size = 1000;
+    const int max_heap_size = 50;
     const int max_value = 1000;
     const int query_count = 1000;
 
@@ -57,11 +57,11 @@ int main()
             }
             else
             {
-                int lo = std::rand() % arr.size();
-                int hi = lo + (std::rand() % (arr.size() - lo)) + 1;
-
-                //int lo = 0;
+                int lo = 0;
                 //int hi = arr.size();
+
+                //int lo = std::rand() % arr.size();
+                int hi = lo + (std::rand() % (arr.size() - lo)) + 1;
 
                 auto start = std::chrono::high_resolution_clock::now();
                 int m1 = *std::max_element(arr.begin() + lo, arr.begin() + hi);

@@ -5,6 +5,7 @@
 #include <map>
 
 #include "TSegmentTreeIB.hpp"
+#include "hld.hpp"
 
 using namespace std;
 
@@ -244,6 +245,14 @@ vector<int> solveST(vector<vector<int>> tree, vector<vector<int>> queries)
     return result;
 }
 
+using MaxSegmentTree = TSegmentTreeIB<int, std::greater<int>>;
+
+TreePath
+{
+    std::vector<int> to_u;
+    std::vector<int> to_v;
+};
+
 vector<int> solveHLD(vector<vector<int>> tree, vector<vector<int>> queries)
 {
     vector<int> result;
@@ -254,6 +263,63 @@ vector<int> solveHLD(vector<vector<int>> tree, vector<vector<int>> queries)
 
     auto hldAdj = getHldAdjacency(hld, adj);
     auto hdlRanks = transformToTree(hldAdj);
+
+    auto visit_order = eulerWalk(hldAdj);
+
+    std::vector<int> last_visits(hldAdj.size());
+    std::vector<int> visited_ranks;
+    visited_ranks.reserve(visit_order.size());
+    for (int i = 0; i < visit_order.size(); ++i)
+    {
+        last_visits[visit_order[i]] = i;
+        visited_ranks.push_back(ranks[visit_order[i]]);
+    }
+
+    std::vector<int> values(hldAdj.size(), 0);
+    MinSegmentTree visited_ranks_st(visited_ranks);
+
+    std::vector<MinSegmentTree> hld_sts;
+    hld_sts.reserve(hldAdj.size());
+    for (const auto& s : hld.sequences)
+    {
+        hld_sts.emplace_back(std::vector<int>(s.size(), 0));
+    }
+
+    std::vector<int> values(adj.size(), 0);
+    MinSegmentTree visited_ranks_st(visited_ranks);
+
+    for (const auto& q : queries)
+    {
+        if (q[0] == 1)
+        {
+            values[q[1]] = q[2];
+            auto seq_adr = hld.vertex_sequence[q[1]];
+            hld_sts[seq_adr.first].update(seq_adr.second, q[2]);
+        }
+        else
+        {
+            //auto path = findTreePath(adj, visit_order, visited_ranks_st, last_visits, q[1], q[2]);
+            //int max_value = 0;
+            //for (int i : path)
+            //{
+                //max_value = std::max(max_value, values[i]);
+            //}
+            //result.push_back(max_value);
+
+            TreePath path;
+
+            std::pair<int, int> root_outs;
+            if (path.first.size() == 1)
+            {
+                root_outs.first = hld.vertex_sequence[q[1]].second;
+            }
+            else
+            {
+                root_outs.first = hld.vertex_sequence[path.fist[1].back()]
+            }
+            if (path.second.size() == 1)
+        }
+    }
 
     return result;
 }
