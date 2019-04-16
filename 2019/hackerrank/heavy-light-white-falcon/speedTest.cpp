@@ -10,7 +10,7 @@
 int main()
 {
     const int heaps_count = 100;
-    const int max_heap_size = 50;
+    const int max_heap_size = 50000;
     const int max_value = 1000;
     const int query_count = 1000;
 
@@ -66,22 +66,22 @@ int main()
                 auto start = std::chrono::high_resolution_clock::now();
                 int m1 = *std::max_element(arr.begin() + lo, arr.begin() + hi);
                 auto end = std::chrono::high_resolution_clock::now();
-                total_std_time += (end - start).count();
+                //total_std_time += (end - start).count();
 
                 start = std::chrono::high_resolution_clock::now();
                 int m2 = mh.getMaxInRange(lo, hi);
                 end = std::chrono::high_resolution_clock::now();
-                total_heap_time += (end - start).count();
+                //total_heap_time += (end - start).count();
 
                 start = std::chrono::high_resolution_clock::now();
                 int m3 = st.getMaxInRange(lo, hi);
                 end = std::chrono::high_resolution_clock::now();
-                total_st_time += (end - start).count();
+                //total_st_time += (end - start).count();
 
                 start = std::chrono::high_resolution_clock::now();
                 int m4 = mhib.getTopInRange(lo, hi);
                 end = std::chrono::high_resolution_clock::now();
-                total_template_heap_time += (end - start).count();
+                //total_template_heap_time += (end - start).count();
 
                 if (m1 != m2 || m2 != m3 || m3 != m4)
                 {

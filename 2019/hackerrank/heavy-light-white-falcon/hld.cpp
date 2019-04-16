@@ -40,12 +40,13 @@ HLD hlDecompose(const AdjList& tree)
         while (true)
         {
             const auto& children = tree[cur];
+            auto child_last = std::prev(children.end());
             const auto heavy_child_it = std::find_if(
                     children.begin(),
-                    children.end(),
+                    child_last,
                     [&](int c){ return child_count[c] * 2 >= child_count[cur]; });
 
-            for (auto it = children.begin(); it != children.end(); ++it)
+            for (auto it = children.begin(); it != std::prev(children.end()); ++it)
             {
                 if (it != heavy_child_it)
                 {
@@ -53,7 +54,7 @@ HLD hlDecompose(const AdjList& tree)
                 }
             }
 
-            if (heavy_child_it == children.end())
+            if (heavy_child_it == child_last)
             {
                 break;
             }

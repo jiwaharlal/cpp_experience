@@ -177,11 +177,13 @@ std::vector<int> pathToParent(int child, int parent, const AdjList& adj)
     {
         result.push_back(cur);
     }
+    result.push_back(parent);
+
     return result;
 }
 
 template <typename VisitedRanks>
-std::vector<int> findTreePath(
+std::vector<std::vector<int>> findTreePath(
         const AdjList& adj,
         const std::vector<int>& visit_order,
         const VisitedRanks& visited_ranks,
@@ -189,17 +191,17 @@ std::vector<int> findTreePath(
         int u,
         int v)
 {
-    std::vector<int> result;
+    std::vector<std::vector<int>> result;
 
     auto visits = std::minmax(vertex_visits[u], vertex_visits[v]);
     auto parent_visit_idx = minIdxInRange(visited_ranks, visits.first, visits.second + 1);
     int parent = visit_order[parent_visit_idx];
 
-    result = pathToParent(u, parent, adj);
-    auto path_v = pathToParent(v, parent, adj);
-    result.reserve(result.size() + path_v.size() + 1);
-    result.push_back(parent);
-    std::copy(path_v.rbegin(), path_v.rend(), std::back_inserter(result));
+    for (int child : {u, v})
+    {
+        auto p = pathToParent(child, parent, adj);
+        result.emplace_back(p.rbegin(), p.rend());
+    }
 
     return result;
 }
@@ -234,9 +236,12 @@ vector<int> solveST(vector<vector<int>> tree, vector<vector<int>> queries)
         {
             auto path = findTreePath(adj, visit_order, visited_ranks_st, last_visits, q[1], q[2]);
             int max_value = 0;
-            for (int i : path)
+            for (const auto& subpath : path)
             {
-                max_value = std::max(max_value, values[i]);
+                for (int i : subpath)
+                {
+                    max_value = std::max(max_value, values[i]);
+                }
             }
             result.push_back(max_value);
         }
@@ -245,13 +250,39 @@ vector<int> solveST(vector<vector<int>> tree, vector<vector<int>> queries)
     return result;
 }
 
-using MaxSegmentTree = TSegmentTreeIB<int, std::greater<int>>;
-
-TreePath
+AdjList getHldAdjacency(const HLD& hld, const AdjList& adj)
 {
-    std::vector<int> to_u;
-    std::vector<int> to_v;
-};
+    AdjList result;
+    result.reserve(hld.sequences.size());
+
+    for (int seq_u = 0; seq_u < hld.sequences.size(); ++seq_u)
+    {
+        result.emplace_back();
+
+        int size = 0;
+        for (int u : hld.sequences[seq_u])
+        {
+            size += adj[u].size();
+        }
+        result.back().reserve(size);
+
+        for (int u : hld.sequences[seq_u])
+        {
+            for (int v : adj[u])
+            {
+                int seq_v = hld.vertex_sequence[v].first;
+                if (seq_v != seq_u)
+                {
+                    result.back().push_back(seq_v);
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+using MaxSegmentTree = TSegmentTreeIB<int, std::greater<int>>;
 
 vector<int> solveHLD(vector<vector<int>> tree, vector<vector<int>> queries)
 {
@@ -275,49 +306,73 @@ vector<int> solveHLD(vector<vector<int>> tree, vector<vector<int>> queries)
         visited_ranks.push_back(ranks[visit_order[i]]);
     }
 
-    std::vector<int> values(hldAdj.size(), 0);
     MinSegmentTree visited_ranks_st(visited_ranks);
 
-    std::vector<MinSegmentTree> hld_sts;
+    std::vector<MaxSegmentTree> hld_sts;
     hld_sts.reserve(hldAdj.size());
     for (const auto& s : hld.sequences)
     {
         hld_sts.emplace_back(std::vector<int>(s.size(), 0));
     }
 
-    std::vector<int> values(adj.size(), 0);
-    MinSegmentTree visited_ranks_st(visited_ranks);
+    // returns position in parent sequence from which child sequence originates
+    auto parentVertexPosition = [&](int parent_seq_idx, int child_seq_idx)
+    {
+        int first_child_vertex = hld.sequences[child_seq_idx].front();
+        int parent_vertex = adj[first_child_vertex].back();
+        return hld.vertex_sequence[parent_vertex].second;
+    };
 
     for (const auto& q : queries)
     {
         if (q[0] == 1)
         {
-            values[q[1]] = q[2];
             auto seq_adr = hld.vertex_sequence[q[1]];
             hld_sts[seq_adr.first].update(seq_adr.second, q[2]);
         }
         else
         {
-            //auto path = findTreePath(adj, visit_order, visited_ranks_st, last_visits, q[1], q[2]);
-            //int max_value = 0;
-            //for (int i : path)
-            //{
-                //max_value = std::max(max_value, values[i]);
-            //}
-            //result.push_back(max_value);
+            std::vector<std::pair<int, int>> sequence_positions = {
+                    hld.vertex_sequence[q[1]],
+                    hld.vertex_sequence[q[2]]};
 
-            TreePath path;
+            auto path = findTreePath(
+                    hldAdj,
+                    visit_order,
+                    visited_ranks_st,
+                    last_visits,
+                    sequence_positions[0].first,
+                    sequence_positions[1].first);
 
-            std::pair<int, int> root_outs;
-            if (path.first.size() == 1)
+            int max_value = 0;
+
+            std::vector<int> root_connections(2);
+            for (int i = 0; i < 2; ++i)
             {
-                root_outs.first = hld.vertex_sequence[q[1]].second;
+                const auto& p = path[i];
+                std::vector<int> his;
+                his.reserve(p.size());
+
+                for (int j = 0, last = p.size() - 1; j != last; ++j)
+                {
+                    his.push_back(parentVertexPosition(p[j], p[j + 1]));
+                }
+                his.push_back(sequence_positions[i].second);
+
+                for (int j = 1; j != p.size(); ++j)
+                {
+                    auto seq_max = hld_sts[p[j]].getTopInRange(0, his[j] + 1);
+                }
+
+                root_connections[i] = his[0];
             }
-            else
-            {
-                root_outs.first = hld.vertex_sequence[path.fist[1].back()]
-            }
-            if (path.second.size() == 1)
+
+            std::sort(root_connections.begin(), root_connections.end());
+            int parent_max = hld_sts[path[0][0]].getTopInRange(
+                    root_connections[0], root_connections[1] + 1);
+            max_value = std::max(max_value, parent_max);
+
+            result.push_back(max_value);
         }
     }
 
