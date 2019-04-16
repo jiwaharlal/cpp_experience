@@ -35,10 +35,14 @@ HLD hlDecompose(const AdjList& tree)
     {
         int cur = stack.back();
         stack.pop_back();
-        hld.sequences.emplace_back(1, cur);
+        hld.sequences.emplace_back();
 
         while (true)
         {
+            hld.vertex_sequence[cur] =
+                std::make_pair(hld.sequences.size() - 1, hld.sequences.back().size());
+            hld.sequences.back().push_back(cur);
+
             const auto& children = tree[cur];
             auto child_last = std::prev(children.end());
             const auto heavy_child_it = std::find_if(
@@ -60,9 +64,6 @@ HLD hlDecompose(const AdjList& tree)
             }
 
             cur = *heavy_child_it;
-            hld.vertex_sequence[cur] =
-                std::make_pair(hld.sequences.size() - 1, hld.sequences.back().size());
-            hld.sequences.back().push_back(cur);
         }
     }
 

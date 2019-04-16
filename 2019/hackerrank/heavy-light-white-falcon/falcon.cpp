@@ -289,11 +289,11 @@ vector<int> solveHLD(vector<vector<int>> tree, vector<vector<int>> queries)
     vector<int> result;
 
     auto adj = buildGraph(tree);
-    auto ranks = transformToTree(adj);
+    transformToTree(adj);
     auto hld = hlDecompose(adj);
 
     auto hldAdj = getHldAdjacency(hld, adj);
-    auto hdlRanks = transformToTree(hldAdj);
+    auto hldRanks = transformToTree(hldAdj);
 
     auto visit_order = eulerWalk(hldAdj);
 
@@ -303,7 +303,7 @@ vector<int> solveHLD(vector<vector<int>> tree, vector<vector<int>> queries)
     for (int i = 0; i < visit_order.size(); ++i)
     {
         last_visits[visit_order[i]] = i;
-        visited_ranks.push_back(ranks[visit_order[i]]);
+        visited_ranks.push_back(hldRanks[visit_order[i]]);
     }
 
     MinSegmentTree visited_ranks_st(visited_ranks);
@@ -362,6 +362,7 @@ vector<int> solveHLD(vector<vector<int>> tree, vector<vector<int>> queries)
                 for (int j = 1; j != p.size(); ++j)
                 {
                     auto seq_max = hld_sts[p[j]].getTopInRange(0, his[j] + 1);
+                    max_value = std::max(max_value, seq_max);
                 }
 
                 root_connections[i] = his[0];
@@ -412,7 +413,7 @@ int main()
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
     }
 
-    vector<int> result = solveST(tree, queries);
+    vector<int> result = solveHLD(tree, queries);
 
     for (int result_itr = 0; result_itr < result.size(); result_itr++) {
         std::cout << result[result_itr];
