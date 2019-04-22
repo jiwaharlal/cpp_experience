@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <functional>
 #include <iostream>
 #include <vector>
 #include <queue>
@@ -11,6 +12,43 @@ vector<string> split_string(string);
  * Complete the jennysSubtrees function below.
  */
 using AdjList = std::vector<std::vector<int>>;
+
+// custom specialization of std::hash can be injected in namespace std
+namespace std
+{
+    template<typename T, typename U> struct hash<std::pair<T, U>>
+    {
+        typedef std::pair<T, U> argument_type;
+        typedef std::size_t result_type;
+        result_type operator()(argument_type const& s) const noexcept
+        {
+            result_type const h1 ( std::hash<T>{}(s.first) );
+            result_type const h2 ( std::hash<U>{}(s.second) );
+            return (h1 << 1) * (h2 << 13); // or use boost::hash_combine (see Discussion)
+        }
+    };
+
+    template <typename T> struct hash<std::vector<T>>
+    {
+        typedef std::vector<T> argument_type;
+        typedef std::size_t result_type;
+        result_type operator()(const argument_type& v) const noexcept
+        {
+            auto h = std::hash<std::size_t>{}(v.size());
+            for (std::size_t i = 0; i != v.size(); ++i)
+            {
+                h = (h + 19) ^ (i * std::hash<T>{}(v[i]) + 27);
+            }
+            //return std::accumulate(
+                    //v.begin(),
+                    //v.end(),
+                    //std::hash<std::size_t>{}(v.size()),
+                    //[](std::size_t prev_hash, const auto& val)
+                        //{ return (prev_hash << 1) ^ std::hash<T>{}(val); });
+            return h;
+        }
+    };
+}
 
 AdjList buildGraph(const std::vector<std::vector<int>>& tree)
 {
@@ -187,6 +225,33 @@ Signature getSignaturePriv(const AdjList& adj, int v, int level, int exclude_ver
     return s;
 }
 
+std::size_t getHashPriv(const AdjList& adj, int v, int level, int exclude_vertex)
+{
+    auto h = std::hash<std::pair<int, int>>{}(std::make_pair(level, adj[v].size()));
+
+    std::vector<std::size_t> sub_hashes;
+    sub_hashes.reserve(adj[v].size());
+
+    for (int c : adj[v])
+    {
+        if (c == exclude_vertex)
+        {
+            continue;
+        }
+        sub_hashes.emplace_back(getHashPriv(adj, c, level + 1, v));
+    }
+
+    std::sort(sub_hashes.begin(), sub_hashes.end());
+
+    //return std::hash<std::pair<std::size_t, std::size_t>>{}(
+            //std::make_pair(h, std::hash<std::vector<std::size_t>>{}(sub_hashes)));
+    return std::accumulate(
+            sub_hashes.begin(),
+            sub_hashes.end(),
+            h,
+            [](std::size_t h1, std::size_t h2){ return (h1 << 3) ^ h2 + 3; });
+}
+
 Signature getSignature(const AdjList& adj)
 {
     Signature result;
@@ -210,6 +275,44 @@ Signature getSignature(const AdjList& adj)
     }
 
     return result;
+}
+
+std::size_t getHash(const AdjList& adj)
+{
+    auto centers = getCenters(adj);
+
+    if (centers.size() == 1)
+    {
+        return getHashPriv(adj, centers[0], 0, 0);
+    }
+
+    auto h1 = getHashPriv(adj, centers[0], 0, centers[1]);
+    auto h2 = getHashPriv(adj, centers[1], 0, centers[0]);
+
+    auto hash_pair = std::minmax(h1, h2);
+
+    return std::hash<std::pair<std::size_t, std::size_t>>{}(hash_pair);
+    //return (hash_pair.first << 1) ^ hash_pair.second;
+}
+
+int jennysSubtreesHash(int n, int r, vector<vector<int>> edges)
+{
+    (void) n;
+    auto adj = buildGraph(edges);
+
+    std::vector<std::size_t> signatures;
+    signatures.reserve(adj.size());
+    for (int v = 1; v < static_cast<int>(adj.size()); ++v)
+    {
+        auto subtree = getSubtree(adj, v, r);
+        signatures.push_back(getHash(subtree));
+    }
+
+    std::sort(signatures.begin(), signatures.end());
+    auto it = std::unique(signatures.begin(), signatures.end());
+    auto unique_count = it - signatures.begin();
+
+    return unique_count;
 }
 
 int jennysSubtrees(int n, int r, vector<vector<int>> edges)
@@ -256,7 +359,9 @@ int main()
         cin.ignore(numeric_limits<streamsize>::max(), '\n');
     }
 
-    int result = jennysSubtrees(n, r, edges);
+    int result = r > 50
+        ? jennysSubtreesHash(n, r, edges)
+        : jennysSubtrees(n, r, edges);
 
     std::cout << result << "\n";
 
