@@ -68,12 +68,12 @@ std::vector<int> transformToTree(AdjList& adj)
     return ranks;
 }
 
-std::vector<int> calcWeights(const AdjList& tree, const std::vector<int>& vertex_weights)
+std::vector<long> calcWeights(const AdjList& tree, const std::vector<int>& vertex_weights)
 {
-    std::vector<int> stack;
-    stack.reserve(tree.size());
+    //std::vector<int> stack;
+    //stack.reserve(tree.size());
 
-    std::vector<int> weights(tree.size(), 0);
+    std::vector<long> weights(tree.size(), 0);
 
     std::vector<int> assign_stack;
     assign_stack.reserve(tree.size());
@@ -109,25 +109,6 @@ std::vector<int> calcWeights(const AdjList& tree, const std::vector<int>& vertex
     return weights;
 }
 
-//template <typename PairType>
-//struct LessFirst
-//{
-    //bool operator ()(const PairType& lhs, const PairType& rhs) const
-    //{
-        //return lhs.first < rhs.first;
-    //}
-
-    //bool operator ()(const typename PairType::first_type& lhs, const PairType& rhs) const
-    //{
-        //return lhs < rhs.first;
-    //}
-
-    //bool operator ()(const PairType& lhs, const typename PairType::first_type& rhs) const
-    //{
-        //return lhs.first < rhs;
-    //}
-//};
-
 bool isParentOf(int p, int c, const AdjList& tree)
 {
     for ( ; c != 0; c = tree[c].back())
@@ -140,7 +121,7 @@ bool isParentOf(int p, int c, const AdjList& tree)
     return false;
 }
 
-int balancedForest(vector<int> c, vector<vector<int>> edges)
+long balancedForest(vector<int> c, vector<vector<int>> edges)
 {
     c.insert(c.begin(), 0);
     edges.push_back({0, 1});
@@ -148,16 +129,19 @@ int balancedForest(vector<int> c, vector<vector<int>> edges)
     auto ranks = transformToTree(adj);
     auto weights = calcWeights(adj, c);
 
-    std::multimap<int, int> vertex_by_weight;
+    std::multimap<long, int> vertex_by_weight;
     for (int i = 0; i < weights.size(); ++i)
     {
         vertex_by_weight.emplace(weights[i], i);
     }
 
-    const auto third_it = vertex_by_weight.upper_bound(weights[0] / 3);
+    const auto third_it = weights[0] % 3 == 0
+            ? vertex_by_weight.lower_bound(weights[0] / 3)
+            : vertex_by_weight.upper_bound(weights[0] / 3);
+
     const auto half_it = vertex_by_weight.upper_bound(weights[0] / 2);
 
-    int first_min = [&]()
+    long first_min = [&]()
     {
         for (auto it = third_it; it != half_it; ++it)
         {
@@ -169,7 +153,7 @@ int balancedForest(vector<int> c, vector<vector<int>> edges)
 
             for (int pi = adj[it->second].back(); pi != 0; pi = adj[pi].back())
             {
-                int updated_weight = weights[pi] - it->first;
+                long updated_weight = weights[pi] - it->first;
                 if (weights[0] - updated_weight == it->first * 2)
                 {
                     return it->first - updated_weight;
@@ -191,23 +175,23 @@ int balancedForest(vector<int> c, vector<vector<int>> edges)
                 return weights[v] - lightest;
             }
         }
-        return std::numeric_limits<int>::max();
+        return std::numeric_limits<long>::max();
     }();
 
-    int second_min = [&]()
+    long second_min = [&]()
     {
         for (auto it = std::prev(third_it); it != std::prev(vertex_by_weight.begin()); --it)
         {
             for (int pi = adj[it->second].back(); pi != 0; pi = adj[pi].back())
             {
-                int updated_weight = weights[pi] - it->first;
+                long updated_weight = weights[pi] - it->first;
                 if (weights[0] - it->first == updated_weight * 2)
                 {
                     return updated_weight - it->first;
                 }
             }
         }
-        return std::numeric_limits<int>::max();
+        return std::numeric_limits<long>::max();
     }();
 
     auto total_min = std::min(first_min, second_min);
@@ -253,7 +237,7 @@ int main()
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
         }
 
-        int result = balancedForest(c, edges);
+        long result = balancedForest(c, edges);
 
         std::cout << result << "\n";
     }
