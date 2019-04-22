@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <iostream>
 #include <vector>
+#include <queue>
 
 using namespace std;
 
@@ -33,27 +34,207 @@ AdjList buildGraph(const std::vector<std::vector<int>>& tree)
     return adj;
 }
 
-AdjList
+AdjList getSubtree(const AdjList& adj, int center, int radius)
+{
+    AdjList result(adj.size());
+
+    std::queue<std::pair<int, int>> q;
+    q.push(std::make_pair(center, 0));
+    std::vector<bool> visited(adj.size(), false);
+
+    while (!q.empty())
+    {
+        auto cur = q.front();
+        q.pop();
+        visited[cur.first] = true;
+
+        if (cur.second >= radius)
+        {
+            continue;
+        }
+
+        for (auto next : adj[cur.first])
+        {
+            if (visited[next])
+            {
+                continue;
+            }
+
+            result[cur.first].push_back(next);
+            result[next].push_back(cur.first);
+
+            q.push(std::make_pair(next, cur.second + 1));
+        }
+    }
+
+    return result;
+}
+
+std::vector<int> getCenters(const AdjList& adj)
+{
+    std::vector<int> result;
+
+    std::vector<int> neighbors_left;
+    neighbors_left.reserve(adj.size());
+
+    for (int i = 0; i < static_cast<int>(adj.size()); ++i)
+    {
+        neighbors_left.push_back(adj[i].size());
+    }
+
+    std::vector<std::pair<int, int>> centers;
+    centers.emplace_back(0, -1);
+
+    std::queue<std::pair<int, int>> q;
+    for (int v = 1; v != static_cast<int>(adj.size()); ++v)
+    {
+        if (adj[v].size() == 1)
+        {
+            q.push(std::make_pair(v, 0));
+        }
+    }
+
+    while (!q.empty())
+    {
+        auto cur = q.front();
+        q.pop();
+
+        if (cur.second > centers[0].second)
+        {
+            centers.clear();
+        }
+        centers.push_back(cur);
+
+        for (auto next : adj[cur.first])
+        {
+            --neighbors_left[next];
+            if (neighbors_left[next] == 1)
+            {
+                q.push(std::make_pair(next, cur.second + 1));
+            }
+        }
+    }
+
+    std::transform(
+            centers.begin(),
+            centers.end(),
+            std::back_inserter(result),
+            [](const auto& p){ return p.first; });
+
+    return result;
+}
+
+using Signature = std::vector<std::pair<int, int>>;
+
+std::queue<Signature> empty_signatures;
+
+Signature getSignature()
+{
+    Signature s;
+
+    if (!empty_signatures.empty())
+    {
+        s.swap(empty_signatures.front());
+        empty_signatures.pop();
+    }
+
+    return s;
+}
+
+void releaseSignature(Signature&& s)
+{
+    s.clear();
+    empty_signatures.push(std::move(s));
+}
+
+//bool cmpSignatures(const Signature& lhs, const Signature& rhs)
+//{
+    //return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+//}
+
+Signature getSignaturePriv(const AdjList& adj, int v, int level, int exclude_vertex)
+{
+    Signature s = getSignature();
+
+    std::vector<Signature> sub_sigs;
+    sub_sigs.reserve(adj[v].size());
+
+    for (int c : adj[v])
+    {
+        if (c == exclude_vertex)
+        {
+            continue;
+        }
+        sub_sigs.emplace_back(getSignaturePriv(adj, c, level + 1, v));
+    }
+
+    std::sort(sub_sigs.begin(), sub_sigs.end());
+
+    s.reserve(std::accumulate(
+                  sub_sigs.begin(),
+                  sub_sigs.end(),
+                  1,
+                  [](int s, const auto& v){ return s + v.size(); }));
+    s.emplace_back(level, adj[v].size());
+
+    for (int i = 0; i < static_cast<int>(sub_sigs.size()); ++i)
+    {
+        const auto& ss = sub_sigs[i];
+        std::copy(ss.begin(), ss.end(), std::back_inserter(s));
+        releaseSignature(std::move(sub_sigs[i]));
+    }
+
+    return s;
+}
+
+Signature getSignature(const AdjList& adj)
+{
+    Signature result;
+    auto centers = getCenters(adj);
+
+    if (centers.size() == 1)
+    {
+        result = getSignaturePriv(adj, centers[0], 0, 0);
+    }
+    else
+    {
+        std::vector<Signature> sub_sigs = {
+            getSignaturePriv(adj, centers[0], 0, centers[1]),
+            getSignaturePriv(adj, centers[1], 0, centers[0])};
+
+        std::sort(sub_sigs.begin(), sub_sigs.end());
+        for (const auto& ss : sub_sigs)
+        {
+            std::copy(ss.begin(), ss.end(), std::back_inserter(result));
+        }
+    }
+
+    return result;
+}
 
 int jennysSubtrees(int n, int r, vector<vector<int>> edges)
 {
+    (void) n;
     auto adj = buildGraph(edges);
 
-    std::vector<> signatures;
-    for (int v = 0; v < edges.size(); ++v)
+    std::vector<Signature> signatures;
+    signatures.reserve(adj.size());
+    for (int v = 1; v < static_cast<int>(adj.size()); ++v)
     {
         auto subtree = getSubtree(adj, v, r);
-        signatures.push_back(getSignature(subtee));
+        signatures.push_back(getSignature(subtree));
     }
 
     std::sort(signatures.begin(), signatures.end());
+    auto it = std::unique(signatures.begin(), signatures.end());
+    auto unique_count = it - signatures.begin();
 
-    return std::unique(signatures.begin(), signatures.end()) - signatures.begin();
+    return unique_count;
 }
 
 int main()
 {
-    ofstream fout(getenv("OUTPUT_PATH"));
+    //ofstream fout(getenv("OUTPUT_PATH"));
 
     string nr_temp;
     getline(cin, nr_temp);
@@ -77,9 +258,9 @@ int main()
 
     int result = jennysSubtrees(n, r, edges);
 
-    fout << result << "\n";
+    std::cout << result << "\n";
 
-    fout.close();
+    //fout.close();
 
     return 0;
 }
