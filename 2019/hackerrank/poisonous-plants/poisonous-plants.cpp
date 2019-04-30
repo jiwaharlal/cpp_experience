@@ -2,58 +2,71 @@
 #include <vector>
 #include <list>
 #include <set>
+#include <limits>
+#include <algorithm>
 
 using namespace std;
 
 vector<string> split_string(string);
 
-struct Links
-{
-    int prev;
-    int next;
-};
-
 // Complete the poisonousPlants function below.
 int poisonousPlants(vector<int> p)
 {
-    std::vector<Links> still_alive;
-    for (int i = 0; i < p.size(); ++i)
+    std::list<int> plants{p.begin(), p.end()};
+
+    std::vector<std::list<int>::iterator> to_die;
+    std::vector<std::list<int>::iterator> to_check;
+    to_check.reserve(plants.size());
+    for (auto it = std::next(plants.begin()); it != plants.end(); ++it)
     {
-        still_alive.push_back(Links{i - 1, i + 1});
+        to_check.push_back(it);
     }
 
-    std::vector<int> to_check;
-    to_check.reserve(p.size() - 1);
-    for (int i = 1; i < p.size(); ++i)
-    {
-        to_check.push_back(i);
-    }
+    int days = 0;
 
-    std::vector<int> to_die;
-    while (true)
+    while (!to_check.empty())
     {
-        to_die.clear();
-        std::vector<int> next_check;
-
-        for (int i = 0; i < to_check.size(); ++i)
+        for (auto it : to_check)
         {
-            int elt_idx = to_check[i];
-            int prev_idx = still_alive[elt_idx].prev;
-            int next_idx = still_alive[elt_idx].next;
-
-            if (p[elt_idx] > p[prev_idx])
+            if (*it > *std::prev(it))
             {
-                to_die.push_back(elt_idx);
-                next_check.push_back(next_idx);
+                to_die.push_back(it);
             }
         }
+
+        if (to_die.empty())
+        {
+            break;
+        }
+
+        to_check.clear();
+        for (int i = 0, limit = to_die.size() - 1; i < limit; ++i)
+        {
+            auto next_it = std::next(to_die[i]);
+            if (next_it == to_die[i + 1])
+            {
+                continue;
+            }
+            to_check.push_back(next_it);
+        }
+        if (to_die.back() != plants.end() && std::next(to_die.back()) != plants.end())
+        {
+            to_check.push_back(std::next(to_die.back()));
+        }
+
+        ++days;
+        for (auto it : to_die)
+        {
+            plants.erase(it);
+        }
+        to_die.clear();
     }
+
+    return days;
 }
 
 int main()
 {
-    ofstream fout(getenv("OUTPUT_PATH"));
-
     int n;
     cin >> n;
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
@@ -73,9 +86,7 @@ int main()
 
     int result = poisonousPlants(p);
 
-    fout << result << "\n";
-
-    fout.close();
+    std::cout << result << "\n";
 
     return 0;
 }
