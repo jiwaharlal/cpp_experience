@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <numeric>
 
+#include "SegmentTreeSolver.hpp"
+
 using AdjList = std::vector<std::vector<int>>;
 
 static const long c_magic_divider = std::pow(10, 9) + 7;
@@ -125,10 +127,7 @@ std::vector<int> findAllSubtreeNodes(const AdjList& adj, const std::vector<int>&
         }
     }
 
-    for ( ; it != new_nodes_to_root.rend(); ++it)
-    {
-        result.push_back(*it);
-    }
+    result.insert(result.end(), it, new_nodes_to_root.rend());
 
     return result;
 }
@@ -151,10 +150,6 @@ std::vector<long> calcSums(
 
     for (const auto& query : queries)
     {
-        //std::memset(present.data(), 0, present.size());
-        //std::memset(child_left.data(), 0, child_left.size() * sizeof(int));
-        //std::memset(subtree_sums.data(), 0, subtree_sums.size() + sizeof(long));
-
         auto subtree_nodes = findAllSubtreeNodes(adj, query);
 
         long total_sum = std::accumulate(
@@ -217,6 +212,23 @@ std::vector<long> calcSums(
     return result;
 }
 
+std::vector<long> calcSumsST(
+        const std::vector<std::vector<int>>& edges,
+        const std::vector<std::vector<int>>& queries)
+{
+    SegmentTreeSolver solver(edges);
+
+    std::vector<long> result;
+    result.reserve(queries.size());
+
+    for (const auto& q : queries)
+    {
+        result.push_back(solver.getSum(q));
+    }
+
+    return result;
+}
+
 int main()
 {
     int n, q;
@@ -244,7 +256,7 @@ int main()
         queries.push_back(std::move(vertices));
     }
 
-    auto sums = calcSums(edges, queries);
+    auto sums = calcSumsST(edges, queries);
 
     for (int i : sums)
     {
