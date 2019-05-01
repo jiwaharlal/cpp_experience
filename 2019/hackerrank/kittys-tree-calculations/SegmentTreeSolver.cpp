@@ -1,9 +1,10 @@
 #include "SegmentTreeSolver.hpp"
 
-#include <queue>
-#include <vector>
 #include <algorithm>
 #include <cmath>
+#include <list>
+#include <queue>
+#include <vector>
 
 namespace
 {
@@ -127,6 +128,7 @@ int SegmentTreeSolver::getCommonParent(const std::vector<int>& vertices) const
     return m_visit_order[m_visited_ranks_st.getTopIdxInRange(min_visit, max_visit + 1)];
 }
 
+/*
 long SegmentTreeSolver::getSum(const std::vector<int>& query) const
 {
     int root = getCommonParent(query);
@@ -191,6 +193,73 @@ long SegmentTreeSolver::getSum(const std::vector<int>& query) const
 
         cur = q.top();
         q.pop();
+    }
+
+    return query_sum % c_magic_divider;
+}*/
+
+long SegmentTreeSolver::getSum(const std::vector<int>& query) const
+{
+    int root = getCommonParent(query);
+
+    std::vector<long> subtree_sums(m_tree.size(), 0);
+    std::for_each(query.begin(), query.end(), [&](int v){ subtree_sums[v] = v; });
+
+    using RankNodePair = std::pair<int, int>;
+    std::vector<bool> discovered(m_tree.size(), false);
+
+    std::vector<RankNodePair> q_src;
+    q_src.reserve(query.size());
+    //std::list<RankNodePair> q;
+
+    for (int v : query)
+    {
+        q_src.emplace_back(m_ranks[v], v);
+        //q.emplace_back(m_ranks[v], v);
+        discovered[v] = true;
+    }
+
+    std::sort(q_src.begin(), q_src.end());
+    std::list<RankNodePair> q(q_src.rbegin(), q_src.rend());
+    //q.sort(std::greater<RankNodePair>());
+
+    long query_sum = 0l;
+    long total_sum = std::accumulate(query.begin(), query.end(), 0l, std::plus<long>());
+
+    auto cur_it = q.begin();
+    auto lower_rank_it = std::next(cur_it);
+
+    while (true)
+    {
+        for ( ; lower_rank_it != q.end() && lower_rank_it->first == cur_it->first; ++lower_rank_it);
+
+        int v = cur_it->second;
+        if (v == root)
+        {
+            break;
+        }
+
+        long subtree_sum = subtree_sums[v] % c_magic_divider;
+        query_sum += (subtree_sum * (total_sum - subtree_sum)) % c_magic_divider;
+
+        int parent = m_tree[v].back();
+        subtree_sums[parent] += subtree_sum;
+
+        auto next_it = std::next(cur_it);
+        if (!discovered[parent])
+        {
+            discovered[parent] = true;
+            --(cur_it->first);
+            cur_it->second = parent;
+
+            if (next_it->first <= cur_it->first)
+            {
+                continue;
+            }
+
+            q.splice(lower_rank_it, q, cur_it);
+        }
+        cur_it = next_it;
     }
 
     return query_sum % c_magic_divider;
