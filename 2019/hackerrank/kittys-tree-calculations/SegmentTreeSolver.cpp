@@ -128,7 +128,6 @@ int SegmentTreeSolver::getCommonParent(const std::vector<int>& vertices) const
     return m_visit_order[m_visited_ranks_st.getTopIdxInRange(min_visit, max_visit + 1)];
 }
 
-/*
 long SegmentTreeSolver::getSum(const std::vector<int>& query) const
 {
     int root = getCommonParent(query);
@@ -196,8 +195,9 @@ long SegmentTreeSolver::getSum(const std::vector<int>& query) const
     }
 
     return query_sum % c_magic_divider;
-}*/
+}
 
+/*
 long SegmentTreeSolver::getSum(const std::vector<int>& query) const
 {
     int root = getCommonParent(query);
@@ -210,18 +210,15 @@ long SegmentTreeSolver::getSum(const std::vector<int>& query) const
 
     std::vector<RankNodePair> q_src;
     q_src.reserve(query.size());
-    //std::list<RankNodePair> q;
 
     for (int v : query)
     {
         q_src.emplace_back(m_ranks[v], v);
-        //q.emplace_back(m_ranks[v], v);
         discovered[v] = true;
     }
 
     std::sort(q_src.begin(), q_src.end());
     std::list<RankNodePair> q(q_src.rbegin(), q_src.rend());
-    //q.sort(std::greater<RankNodePair>());
 
     long query_sum = 0l;
     long total_sum = std::accumulate(query.begin(), query.end(), 0l, std::plus<long>());
@@ -264,3 +261,4 @@ long SegmentTreeSolver::getSum(const std::vector<int>& query) const
 
     return query_sum % c_magic_divider;
 }
+*/
