@@ -21,6 +21,9 @@ string organizingContainers(vector<vector<int>> container) {
         }
     }
 
+    std::sort(balls.begin(), balls.end());
+    std::sort(capacities.begin(), capacities.end());
+
     const auto mismatch_it = std::mismatch(
         capacities.begin(), capacities.end(), balls.begin());
 

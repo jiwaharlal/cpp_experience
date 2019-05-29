@@ -2,6 +2,24 @@
 
 using namespace std;
 
+std::vector<std::string> transpose(const std::vector<std::string>& lines)
+{
+    std::vector<std::string> result(lines[0].size());
+
+    for (int symbol_idx = 0; symbol_idx < lines[0].size(); ++symbol_idx)
+    {
+        result[symbol_idx].reserve(lines.size());
+        for (const auto& line : lines)
+        {
+            if (line.size() == symbol_idx)
+                break;
+            result[symbol_idx].push_back(line[symbol_idx]);
+        }
+    }
+
+    return result;
+}
+
 // Complete the encryption function below.
 string encryption(string s)
 {
@@ -20,20 +38,28 @@ string encryption(string s)
         ++row_count;
     }
 
-    std::string result;
-    result.reserve(row_count * (col_count + 1) + 1);
-    auto out_it = std::back_inserter(result);
+    std::vector<std::string> lines;
+    lines.reserve(row_count);
     for (auto it = s.begin(); it != end_it; )
     {
         auto chunk_end_it = std::min(it + col_count, end_it);
-        out_it = std::copy(it, chunk_end_it, out_it);
+        lines.emplace_back(it, chunk_end_it);
         it = chunk_end_it;
-        *out_it = '\n';
-        ++out_it;
     }
 
-    *out_it = 0;
+    std::string result;
 
+    for (int symbol_idx = 0; symbol_idx < lines[0].size(); ++symbol_idx)
+    {
+        for (const auto& line : lines)
+        {
+            if (line.size() == symbol_idx)
+                break;
+            result.push_back(line[symbol_idx]);
+        }
+        result.push_back(' ');
+    }
+    result.pop_back();
     return result;
 }
 
