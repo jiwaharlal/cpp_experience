@@ -31,13 +31,13 @@ TEST(Matrix, reduceGraph)
     EXPECT_EQ(reduced, ref_tree);
 }
 
-TEST(Matrix, transformToEdgeMap)
-{
-    std::vector<std::vector<int>> edges = {{0, 1, 1}, {0, 2, 2}, {2, 3, 4}};
+//TEST(Matrix, transformToEdgeMap)
+//{
+    //std::vector<std::vector<int>> edges = {{0, 1, 1}, {0, 2, 2}, {2, 3, 4}};
 
-    auto edge_map = transformToEdgeMap(buildGraph(edges));
+    //auto edge_map = transformToEdgeMap(buildGraph(edges));
 
-    EdgeMap ref_map = {{1, {0, 1}}, {2, {0, 2}}, {4, {2, 3}}};
+    //EdgeMap ref_map = {{1, {0, 1}}, {2, {0, 2}}, {4, {2, 3}}};
 
-    EXPECT_EQ(edge_map, ref_map);
-}
+    //EXPECT_EQ(edge_map, ref_map);
+//}

@@ -10,6 +10,12 @@ T& other(std::pair<T, T>& p, const T& value)
     return value == p.first ? p.second : p.first;
 }
 
+template <typename T>
+const T& other(const std::pair<T, T>& p, const T& value)
+{
+    return value == p.first ? p.second : p.first;
+}
+
 template <typename T, typename CollectionType>
 const T& other(CollectionType& s, const T& value)
 {
@@ -139,10 +145,12 @@ AdjWeightList findSubtree(const AdjWeightList& adj, int root, const std::vector<
     return result;
 }
 
-std::pair<int, int> reduceNode(AdjWeightList& adj, int u)
+using EdgeInfo = std::pair<int, std::pair<int, int>>;
+
+EdgeInfo reduceNode(AdjWeightList& adj, int u)
 {
     auto min_weight = std::min(adj[u][0].second, adj[u][1].second);
-    auto new_edge = std::make_pair(adj[u][0].first, adj[u][1].first);
+    auto new_edge = std::minmax(adj[u][0].first, adj[u][1].first);
 
     for (const auto& v_pair : adj[u])
     {
@@ -156,7 +164,7 @@ std::pair<int, int> reduceNode(AdjWeightList& adj, int u)
 
     adj[u].clear();
 
-    return new_edge;
+    return std::make_pair(min_weight, new_edge);
 }
 
 AdjWeightList reduceGraph(const AdjWeightList& adj, const std::vector<int>& machines)
@@ -183,40 +191,6 @@ AdjWeightList reduceGraph(const AdjWeightList& adj, const std::vector<int>& mach
     return sub_adj;
 }
 
-using EdgeMap = std::multimap<int, std::pair<int, int>>;
-
-struct EdgeMapIteratorCmp
-{
-    bool operator ()(const EdgeMap::iterator& lhs, const EdgeMap::iterator& rhs) const
-    {
-        return lhs->first < rhs->first;
-    }
-};
-
-EdgeMap transformToEdgeMap(const AdjWeightList& adj)
-{
-    EdgeMap edges;
-    std::set<std::pair<int, int>> collected_edges;
-
-    for (int u = 0; u < adj.size(); ++u)
-    {
-        for (const auto& link : adj[u])
-        {
-            auto node_pair = std::minmax(u, link.first);
-            if (collected_edges.find(node_pair) != collected_edges.end())
-            {
-                continue;
-            }
-
-            collected_edges.insert(node_pair);
-            auto it = edges.emplace(link.second, node_pair);
-        }
-    }
-
-    return edges;
-}
-
-using EdgeInfo = std::pair<int, std::pair<int, int>>;
 using EdgeSet = std::set<EdgeInfo>;
 
 EdgeSet transformToEdgeSet(const AdjWeightList& adj)
@@ -231,6 +205,8 @@ EdgeSet transformToEdgeSet(const AdjWeightList& adj)
             result.emplace(link.second, node_pair);
         }
     }
+
+    return result;
 }
 
 // Complete the minTime function below.
@@ -245,54 +221,43 @@ int minTime(vector<vector<int>> roads, vector<int> machines)
     transformToTree(full_adj, machines[0]);
     auto adj = reduceGraph(full_adj, machines);
 
-    auto edges = transformToEdgeMap(adj);
-
-    std::vector<std::set<EdgeMap::iterator, EdgeMapIteratorCmp>> node_edges(adj.size());
-    for (auto it = edges.begin(); it != edges.end(); ++it)
-    {
-        const auto& nodes = it->second;
-        node_edges[nodes.first].insert(it);
-        node_edges[nodes.second].insert(it);
-    }
-
     std::vector<bool> is_machine(adj.size(), false);
     for (int machine : machines)
     {
         is_machine[machine] = true;
     }
 
+    auto edges = transformToEdgeSet(adj);
     long sum = 0;
+
     while (!edges.empty())
     {
-        const auto& edge_it = edges.begin();
-        sum += edge_it->first;
-        auto nodes = edge_it->second;
+        const auto edge = *edges.begin();
+        edges.erase(edges.begin());
+        sum += edge.first;
 
-        // since edge is contracted, some of nodes it connects might be not needed
-        for (auto node : {nodes.first, nodes.second})
+        const auto& nodes = edge.second;
+
+        for (int u : {nodes.first, nodes.second})
         {
-            node_edges[node].erase(edge_it);
-            if (is_machine[node] || node_edges[node].size() > 2)
+            adj[u].erase(std::remove_if(
+                        adj[u].begin(), adj[u].end(),
+                        [&](const auto& p){ return p.first == other(nodes, u); }), adj[u].end());
+
+            if (adj[u].size() > 2 || is_machine[u])
             {
                 continue;
             }
 
-            // contract more expensive edge
-            auto contract_it = *std::max_element(
-                    node_edges[node].begin(),
-                    node_edges[node].end(),
-                    [](const auto& lhs, const auto& rhs){ return lhs->first < rhs->first; });
-            const EdgeMap::iterator& leave_it = other(node_edges[node], contract_it);
+            for (auto v_pair : adj[u])
+            {
+                auto edge_to_erase = std::make_pair(v_pair.second, std::minmax(v_pair.first, u));
+                edges.erase(edge_to_erase);
+            }
 
-            int other_node = other(contract_it->second, node);
-            leave_it->second = {other(leave_it->second, node), other_node};
-            //other(leave_it->second, node) = other_node;
-            node_edges[other_node].erase(contract_it);
-            node_edges[other_node].insert(leave_it);
-            edges.erase(contract_it);
+            auto new_edge = reduceNode(adj, u);
+            edges.insert(new_edge);
         }
-
-        edges.erase(edge_it);
     }
 
     return sum;
