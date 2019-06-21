@@ -12,17 +12,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
 SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -pg")
 
-add_library(common STATIC
-    graph.cpp
-    connected-components.cpp
+add_executable(decibinary
+    decibinary.cpp
+    decibinary-generator.cpp
     )
-
-target_include_directories(common
-    PUBLIC ${PROJECT_SOURCE_DIR}
-    )
-
-#target_link_libraries(${GEOMETRY_LINESTRING}
-    #PUBLIC avfw_numeric
-    #PUBLIC preprocessor
-    #PUBLIC algorithms_geo_utils
-    #)

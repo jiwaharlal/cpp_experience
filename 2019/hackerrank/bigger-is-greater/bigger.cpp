@@ -3,7 +3,7 @@
 using namespace std;
 
 // Complete the biggerIsGreater function below.
-string biggerIsGreater(string w) {
+std::string biggerIsGreater(string w) {
     char max_char = w.back();
 
     auto exchange_pos = [&]()
@@ -24,9 +24,9 @@ string biggerIsGreater(string w) {
         return "no answer";
     }
 
-    int donor_pos;
+    int donor_pos = exchange_pos + 1;
 
-    for (auto pos = exchange_pos + 1; pos != w.size(); ++pos)
+    for (std::size_t pos = donor_pos + 1; pos < w.size(); ++pos)
     {
         if (w[pos] < w[donor_pos] && w[pos] > w[exchange_pos])
         {
