@@ -8,6 +8,7 @@ GpsReader/build
 *.out
 heaps/build
 **/build
+**/win-build
 */release
 */debug-build/*
 2018/AStar/debug-build/*
