@@ -29,15 +29,18 @@ public:
         auto list_it1 = it1->second;
         auto list_it2 = it2->second;
 
-        if (*list_it1 == *list_it2)
+        if (list_it1->second == list_it2->second)
         {
             // elements are already in the same list
             return m_sets[u];
         }
 
+        auto set_it1 = m_sets.find(list_it1->second);
+        auto set_it2 = m_sets.find(list_it2->second);
+
         auto sets = std::minmax(
-                m_sets.find(list_it1->second),
-                m_sets.find(list_it2->second),
+                set_it1,
+                set_it2,
                 [](const auto& lhs, const auto& rhs)
                 { return lhs->second.size() < rhs->second.size(); });
 
@@ -53,7 +56,6 @@ public:
 
         larger_list.splice(
                 larger_list.begin(), smaller_list, smaller_list.begin(), smaller_list.end());
-//        m_sets.erase(sets.first);
         m_sets.erase(smaller_list_id);
 
         return larger_list;
@@ -85,20 +87,10 @@ vector<int> maxCircle(vector<vector<int>> queries) {
                 ds.addSet(v);
             }
         }
-        result.push_back(ds.unite(q[0], q[1]).size());
+
+        int new_size = ds.unite(q[0], q[1]).size();
+        result.push_back(std::max(result.back(), new_size));
     }
-
-    //const auto& sets = ds.sets();
-    //auto it = max_element(
-            //sets.begin(), sets.end(),
-            //[](const auto& lhs, const auto& rhs)
-            //{ return lhs.second.size() < rhs.second.size(); });
-
-    //std::transform(
-            //it->second.begin(),
-            //it->second.end(),
-            //std::back_inserter(result),
-            //[](const auto& p){ return p.first; });
 
     return result;
 }
