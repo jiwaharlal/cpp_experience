@@ -18,3 +18,4 @@ heaps/build
 **/*_build/*
 **/*_build
 **/.vscode/*
+*.exe
