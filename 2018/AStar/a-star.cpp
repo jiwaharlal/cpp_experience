@@ -1,14 +1,15 @@
-#include <iostream>
 #include <chrono>
 #include <cstdint>
-#include <opencv2/opencv.hpp>
-#include <glm/glm.hpp>
+#include <iostream>
+#include <queue>
 #include <thread>
 #include <vector>
 
 #include <boost/container/static_vector.hpp>
-#include <boost/range/algorithm_ext.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/range/algorithm_ext.hpp>
+#include <glm/glm.hpp>
+#include <opencv2/opencv.hpp>
 
 struct Point
 {
