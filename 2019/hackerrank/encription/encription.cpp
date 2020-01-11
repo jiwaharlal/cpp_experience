@@ -2,64 +2,25 @@
 
 using namespace std;
 
-std::vector<std::string> transpose(const std::vector<std::string>& lines)
-{
-    std::vector<std::string> result(lines[0].size());
-
-    for (int symbol_idx = 0; symbol_idx < lines[0].size(); ++symbol_idx)
-    {
-        result[symbol_idx].reserve(lines.size());
-        for (const auto& line : lines)
-        {
-            if (line.size() == symbol_idx)
-                break;
-            result[symbol_idx].push_back(line[symbol_idx]);
-        }
-    }
-
-    return result;
-}
-
 // Complete the encryption function below.
-string encryption(string s)
-{
-    auto end_it = std::remove(s.begin(), s.end(), ' ');
-    double len = static_cast<double>(end_it - s.begin());
-    int col_count = static_cast<int>(std::floor(std::sqrt(len)));
-    int row_count = col_count;
-
-    if (row_count * col_count < static_cast<int>(len))
-    {
-        ++col_count;
-    }
-
-    if (row_count * col_count < static_cast<int>(len))
-    {
-        ++row_count;
-    }
-
-    std::vector<std::string> lines;
-    lines.reserve(row_count);
-    for (auto it = s.begin(); it != end_it; )
-    {
-        auto chunk_end_it = std::min(it + col_count, end_it);
-        lines.emplace_back(it, chunk_end_it);
-        it = chunk_end_it;
-    }
+string encryption(string s) {
+    auto end_it = std::remove_if(s.begin(), s.end(), [](char c){ return std::isspace(c); });
+    s.erase(end_it, s.end());
+    int char_count = s.size();
+    int col_count = std::ceil(std::sqrt(char_count));
 
     std::string result;
-
-    for (int symbol_idx = 0; symbol_idx < lines[0].size(); ++symbol_idx)
+    result.reserve(char_count + col_count);
+    for (int col = 0; col != col_count; ++col)
     {
-        for (const auto& line : lines)
+        for (int idx = col; idx < char_count; idx += col_count)
         {
-            if (line.size() == symbol_idx)
-                break;
-            result.push_back(line[symbol_idx]);
+            result.push_back(s[idx]);
         }
         result.push_back(' ');
     }
     result.pop_back();
+
     return result;
 }
 
