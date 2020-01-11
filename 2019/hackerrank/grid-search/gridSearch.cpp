@@ -7,24 +7,22 @@ vector<string> split_string(string);
 // Complete the gridSearch function below.
 string gridSearch(const vector<string>& G, const vector<string>& P) 
 {
-    int start_range = G.size() - P.size() + 1;
-    for (const auto& g : G)
+    const int col_limit = G[0].size() - P[0].size() + 1;
+    const int row_limit = G.size() - P.size() + 1;
+
+    for (int row = 0; row < row_limit; ++row)
     {
-        for (int first_line_idx = 0; first_line_idx != start_range; ++first_line_idx)
+        for (int col = 0; col < col_limit; ++col)
         {
-            const auto& first_line = G[first_line_idx];
-            for (int col = first_line.find(P[0]); col != std::string::npos; col = first_line.find(P[0], col + 1))
+            const auto is_match = std::equal(
+                    P.begin(),
+                    P.end(),
+                    G.begin() + row,
+                    [col](const std::string& p, const std::string& g)
+                    { return std::equal(p.begin(), p.end(), g.begin() + col); });
+            if (is_match)
             {
-                auto is_match = std::equal(
-                        P.begin(),
-                        P.end(),
-                        G.begin() + first_line_idx,
-                        [col](const std::string& p, const std::string& g)
-                        { return std::equal(p.begin(), p.end(), g.begin() + col); });
-                if (is_match)
-                {
-                    return "YES";
-                }
+                return "YES";
             }
         }
     }
