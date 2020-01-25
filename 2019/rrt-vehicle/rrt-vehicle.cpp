@@ -245,11 +245,11 @@ int main()
 
         double delta_steering = 0.;
         int key = cv::waitKey(1);
-        if (key == 81)
-        {
+        std::cout << "Key: " << key << std::endl;
+        if (key == 65363) {
             delta_steering = 0.01;
         }
-        else if (key == 83)
+        else if (key == 65361)
         {
             delta_steering = -0.01;
         }

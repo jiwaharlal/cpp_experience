@@ -6,7 +6,7 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra -pg")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
-find_package(OpenCV 3.2 REQUIRED PATHS /usr/local)
+find_package(OpenCV 2.3 REQUIRED PATHS /usr/local)
 find_package(Boost REQUIRED)
 
 add_executable(rrt-vehicle
