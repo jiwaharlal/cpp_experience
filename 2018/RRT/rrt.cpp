@@ -252,13 +252,13 @@ int main()
     draw(frame, field, tree, robot_pos, goal);
     cv::imshow(name, frame);
     cv::waitKey(1);
-    std::getchar();
 
-    while (true)
+    std::vector<glm::dvec2> path;
+
+    for (int step = 0; step < 10000; ++step)
     {
         auto goal_riched = addBranch(tree, field, 5., goal);
 
-        std::vector<glm::dvec2> path;
         if (goal_riched)
         {
             path = extractPath(tree);
@@ -266,8 +266,8 @@ int main()
 
         draw(frame, field, tree, robot_pos, goal, path);
         cv::imshow(name, frame);
-        std::this_thread::sleep_for(std::chrono::milliseconds(3));
         cv::waitKey(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(3));
 
         if (goal_riched)
         {
@@ -275,6 +275,8 @@ int main()
         }
     }
 
+    draw(frame, field, tree, robot_pos, goal, path);
+    cv::imshow(name, frame);
     cv::waitKey(0);
 
     return 0;
