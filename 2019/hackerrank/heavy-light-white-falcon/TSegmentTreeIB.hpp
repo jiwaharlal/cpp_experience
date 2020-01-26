@@ -24,6 +24,7 @@ int levelBase(int level)
 
 } // unnamed namespace
 
+// Segment tree index-based implementation
 template <typename T, typename Compare = std::less<T> >
 class TSegmentTreeIB
 {
