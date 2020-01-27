@@ -1,5 +1,7 @@
 #include <bits/stdc++.h>
 
+#include "helper.hpp"
+
 using namespace std;
 
 vector<string> split_string(string);
@@ -7,18 +9,27 @@ vector<string> split_string(string);
 /*
  * Complete the andXorOr function below.
  */
-int andXorOr(vector<int> a) {
+Result andXorOr(vector<int> a) {
     /*
      * Write your code here.
      */
-    int max_val = 0;
+    Result best = {0, {0, 0}};
     for (auto it = std::next(a.begin()); it != a.end(); ++it)
     {
-        int val = *it ^ *std::prev(it);
-        max_val = std::max(val, max_val);
+        Result val{*it ^ *std::prev(it), {it - a.begin() - 1, it - a.begin()}};
+        best = std::max(val, best, cmpByValue(std::less<int>()));
     }
 
-    return max_val;
+    auto summits = findSummits(a);
+
+    if (summits.empty())
+    {
+        return best;
+    }
+
+    auto max_on_hills = exploreHills(a, summits, std::bit_xor<int>(), cmpByValue(std::greater<int>()));
+
+    return std::max(best, max_on_hills, cmpByValue(std::less<int>()));
 }
 
 int main()
@@ -40,9 +51,17 @@ int main()
         a[a_itr] = a_item;
     }
 
-    int result = andXorOr(a);
+    auto fullResult = andXorOr(a);
+    int result = fullResult.value;
 
     std::cout << result << "\n";
+
+    // sanity check
+    auto borders = std::minmax(fullResult.idxs.first, fullResult.idxs.second);
+    std::cout << "Borders: " << borders.first << ", " << borders.second << std::endl;
+    std::vector<int> sub_a(a.begin() + borders.first, a.begin() + borders.second + 1);
+    std::sort(sub_a.begin(), sub_a.end());
+    std::cout << "Min elements of subrange: " << sub_a[0] << ", " << sub_a[1] << std::endl;
 
     return 0;
 }

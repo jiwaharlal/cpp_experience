@@ -1,5 +1,7 @@
 #include "helper.hpp"
 
+#include <stdexcept>
+#include <cassert>
 
 // given array of numbers, return indexes of "summits" -
 // values which are greater or equal comared to direct neighbours
@@ -75,9 +77,9 @@ HillExplorationResult exploreHill(
         std::pair<int, int> pos,
         int leftLimit,
         const std::function<int(int, int)>& combine,
-        const std::function<bool(int, int)>& compare)
+        const std::function<bool(const Result&, const Result&)>& compare)
 {
-    int best = combine(ar[pos.first], ar[pos.second]);
+    Result best{combine(ar[pos.first], ar[pos.second]), pos};
 
     while (true)
     {
@@ -100,7 +102,55 @@ HillExplorationResult exploreHill(
             ++pos.second;
         }
 
-        int new_val = combine(ar[pos.first], ar[pos.second]);
+        Result new_val{combine(ar[pos.first], ar[pos.second]), pos};
+
         best = std::min(best, new_val, compare);
     }
+}
+
+// requirements : summits should not be empty
+Result exploreHills(
+        const std::vector<int>& ar,
+        const std::vector<int>& summits,
+        const std::function<int(int, int)>& combine,
+        const std::function<bool(const Result&, const Result&)>& compare)
+{
+    std::vector<std::pair<int, int>> explored_ranges;
+
+    if (summits.empty())
+    {
+        throw std::logic_error("summits is empty");
+    }
+
+    auto r = exploreHill(ar, {summits[0] - 1, summits[0] + 1}, 0, combine, compare);
+
+    auto best = r.best;
+    explored_ranges.push_back(r.pos);
+
+    for (auto it = std::next(summits.begin()); it != summits.end(); ++it)
+    {
+        const auto s = *it;
+
+        r = exploreHill(ar, {s - 1, s + 1}, explored_ranges.back().second, combine, compare);
+
+        best = std::min(best, r.best, compare);
+
+        while (!explored_ranges.empty() && r.pos.first == explored_ranges.back().second)
+        {
+            auto prev_range = explored_ranges.back();
+            explored_ranges.pop_back();
+            int limit = explored_ranges.empty() ? 0 : explored_ranges.back().second;
+            r = exploreHill(ar, {prev_range.first, r.pos.second}, limit, combine, compare);
+            best = std::min(best, r.best, compare);
+
+            if (!(best.idxs.first >= 0 && best.idxs.second >= 0))
+            {
+                throw std::logic_error("Out of index range");
+            }
+        }
+
+        explored_ranges.push_back(r.pos);
+    }
+
+    return best;
 }

@@ -16,4 +16,5 @@ add_subdirectory(tests)
 
 add_executable(and-xor-or
     and-xor-or.cpp
+    helper.cpp
     )

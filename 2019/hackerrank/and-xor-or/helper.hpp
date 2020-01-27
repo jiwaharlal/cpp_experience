@@ -8,15 +8,44 @@ std::vector<int> findSummits(const std::vector<int>& v);
 
 std::vector<int> findSummitsStrict(const std::vector<int>& v);
 
+struct Result
+{
+    int value;
+    std::pair<int, int> idxs;
+};
+
 struct HillExplorationResult
 {
-    int best;
+    Result best;
     std::pair<int, int> pos;
 };
+
+template <typename ValueComparator>
+struct ByValueComparator
+{
+    bool operator()(const Result& lhs, const Result& rhs)
+    {
+        return comparator(lhs.value, rhs.value);
+    }
+
+    ValueComparator comparator;
+};
+
+template <typename ValueComparator>
+ByValueComparator<ValueComparator> cmpByValue(ValueComparator&& comparator)
+{
+    return {std::move(comparator)};
+}
 
 HillExplorationResult exploreHill(
         const std::vector<int>& ar,
         std::pair<int, int> pos,
         int leftLimit,
         const std::function<int(int, int)>& combine,
-        const std::function<bool(int, int)>& compare);
+        const std::function<bool(const Result&, const Result&)>& compare);
+
+Result exploreHills(
+        const std::vector<int>& ar,
+        const std::vector<int>& summits,
+        const std::function<int(int, int)>& combine,
+        const std::function<bool(const Result&, const Result&)>& compare);
