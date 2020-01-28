@@ -8,6 +8,8 @@ std::vector<int> findSummits(const std::vector<int>& v);
 
 std::vector<int> findSummitsStrict(const std::vector<int>& v);
 
+std::pair<std::vector<int>, std::vector<int>> findTippingPoints(const std::vector<int>& v);
+
 struct Result
 {
     int value;
@@ -44,8 +46,21 @@ HillExplorationResult exploreHill(
         const std::function<int(int, int)>& combine,
         const std::function<bool(const Result&, const Result&)>& compare);
 
+HillExplorationResult exploreHill(
+        const std::vector<int>& ar,
+        const std::pair<int, int>& start_pos,
+        const std::pair<int, int>& limits,
+        const std::function<int(int, int)>& combine,
+        const std::function<bool(const Result&, const Result&)>& compare);
+
 Result exploreHills(
         const std::vector<int>& ar,
         const std::vector<int>& summits,
+        const std::function<int(int, int)>& combine,
+        const std::function<bool(const Result&, const Result&)>& compare);
+
+Result exploreHills(
+        const std::vector<int>& ar,
+        std::pair<std::vector<int>, std::vector<int>>& tipping_points,
         const std::function<int(int, int)>& combine,
         const std::function<bool(const Result&, const Result&)>& compare);

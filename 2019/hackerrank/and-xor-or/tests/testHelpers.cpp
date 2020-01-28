@@ -15,6 +15,21 @@ TEST(findSummits, basic)
     EXPECT_EQ(summits, (std::vector<int>{3, 6}));
 }
 
+TEST(findTippingPoints, basic)
+{
+    std::vector<int> data{1, 5, 7, 7, 4, 2, 2, 3, 6, 8, 5, 3, 1, 0};
+    auto tips = findTippingPoints(data);
+
+    EXPECT_EQ(tips.first, (std::vector<int>{0, 6, 13}));
+    EXPECT_EQ(tips.second, (std::vector<int>{3, 9}));
+
+    data = {1, 2, 4};
+    tips = findTippingPoints(data);
+
+    EXPECT_TRUE(tips.first.empty());
+    EXPECT_TRUE(tips.second.empty());
+}
+
 TEST(findSummitsStrict, basic)
 {
     std::vector<int> data{8, 1, 2, 2, 1, 1};
@@ -31,8 +46,6 @@ TEST(findSummitsStrict, basic)
 TEST(exploreHill, basic)
 {
     std::vector<int> data{1, 5, 7, 7, 4, 2, 2, 3, 6, 8, 5, 3, 1, 0};
-
-    auto value_less = [](const Result& lhs, const Result& rhs){ return lhs.value < rhs.value; };
 
     auto exp_result1 = exploreHill(
             data,
@@ -63,6 +76,22 @@ TEST(exploreHill, basic)
 
     EXPECT_EQ(exp_result3.pos, (std::pair<int, int>(0, 13)));
     EXPECT_EQ(exp_result3.best.value, 1);
+}
+
+TEST(exploreHill, secondIncarnation)
+{
+    std::vector<int> data{1, 5, 7, 7, 4, 2, 2, 3, 6, 8, 5, 3, 1, 0};
+
+    auto r1 = exploreHill(
+            data,
+            {2, 4},
+            {0, 6},
+            std::plus<int>(),
+            cmpByValue(std::less<int>()));
+
+    EXPECT_EQ(r1.best.value, 3);
+    EXPECT_EQ(r1.best.idxs, (std::pair<int, int>(0, 6)));
+    EXPECT_EQ(r1.pos, (std::pair<int, int>(0, 6)));
 }
 
 TEST(exploreHills, basic)

@@ -32,6 +32,29 @@ Result andXorOr(vector<int> a) {
     return std::max(best, max_on_hills, cmpByValue(std::less<int>()));
 }
 
+Result andXorOr2(vector<int> a) {
+    /*
+     * Write your code here.
+     */
+    Result best = {0, {0, 0}};
+    for (auto it = std::next(a.begin()); it != a.end(); ++it)
+    {
+        Result val{*it ^ *std::prev(it), {it - a.begin() - 1, it - a.begin()}};
+        best = std::max(val, best, cmpByValue(std::less<int>()));
+    }
+
+    auto tipping_points = findTippingPoints(a);
+
+    if (tipping_points.second.empty())
+    {
+        return best;
+    }
+
+    auto max_on_hills = exploreHills(a, tipping_points, std::bit_xor<int>(), cmpByValue(std::greater<int>()));
+
+    return std::max(best, max_on_hills, cmpByValue(std::less<int>()));
+}
+
 int main()
 {
     int a_count;
@@ -51,7 +74,7 @@ int main()
         a[a_itr] = a_item;
     }
 
-    auto fullResult = andXorOr(a);
+    auto fullResult = andXorOr2(a);
     int result = fullResult.value;
 
     std::cout << result << "\n";
