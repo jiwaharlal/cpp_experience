@@ -20,29 +20,6 @@ Result andXorOr(vector<int> a) {
         best = std::max(val, best, cmpByValue(std::less<int>()));
     }
 
-    auto summits = findSummits(a);
-
-    if (summits.empty())
-    {
-        return best;
-    }
-
-    auto max_on_hills = exploreHills(a, summits, std::bit_xor<int>(), cmpByValue(std::greater<int>()));
-
-    return std::max(best, max_on_hills, cmpByValue(std::less<int>()));
-}
-
-Result andXorOr2(vector<int> a) {
-    /*
-     * Write your code here.
-     */
-    Result best = {0, {0, 0}};
-    for (auto it = std::next(a.begin()); it != a.end(); ++it)
-    {
-        Result val{*it ^ *std::prev(it), {it - a.begin() - 1, it - a.begin()}};
-        best = std::max(val, best, cmpByValue(std::less<int>()));
-    }
-
     auto tipping_points = findTippingPoints(a);
 
     if (tipping_points.second.empty())
@@ -74,7 +51,7 @@ int main()
         a[a_itr] = a_item;
     }
 
-    auto fullResult = andXorOr2(a);
+    auto fullResult = andXorOr(a);
     int result = fullResult.value;
 
     std::cout << result << "\n";
@@ -84,7 +61,8 @@ int main()
     std::cout << "Borders: " << borders.first << ", " << borders.second << std::endl;
     std::vector<int> sub_a(a.begin() + borders.first, a.begin() + borders.second + 1);
     std::sort(sub_a.begin(), sub_a.end());
-    std::cout << "Min elements of subrange: " << sub_a[0] << ", " << sub_a[1] << std::endl;
+    std::copy(sub_a.begin(), sub_a.end(), std::ostream_iterator<int>(std::cout, " "));
+    std::cout << std::endl;
 
     return 0;
 }
