@@ -1,0 +1,22 @@
+from conans import ConanFile, tools
+import os
+
+class ${MICROCORE_CONAN_CLASS}(ConanFile):
+    name = "${MICROCORE_NAME}"
+    version = 0.1
+    author = "Maxim Bondarenko maksym.bondarenko@materialise.kiev.ua"
+    settings = "os", "compiler", "build_type", "arch"
+    options = {"shared": [True, False]}
+    default_options = {"shared": False}
+    generators = "cmake"
+
+    def package(self):
+        src_path = "${MICROCORE_SRC_PATH}"
+        bin_path = "${MICROCORE_BIN_PATH}"
+        self.copy("*", dst="include", src=os.path.join(src_path, "include"))
+        self.copy(self.name + ".dll", dst="bin", src=bin_path)
+        self.copy(self.name + ".so", dst="lib", src=bin_path)
+        self.copy(self.name + ".a", dst="lib", src=bin_path)
+
+    def package_info(self):
+        self.cpp_info.libs = tools.collect_libs(self)
