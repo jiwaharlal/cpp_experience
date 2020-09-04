@@ -22,4 +22,7 @@ set( OpenCVLibs
     boost_thread
 )
 
-target_link_libraries(${PROJECT} curlCpp ${OpenCVLibs})
+target_link_libraries(${PROJECT} 
+    curlCpp 
+    #${OpenCVLibs}
+    )

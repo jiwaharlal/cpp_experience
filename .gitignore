@@ -8,6 +8,7 @@ GpsReader/build
 *.out
 heaps/build
 **/build
+**/build-linux
 **/win-build
 */release
 */debug-build/*
