@@ -1,6 +1,8 @@
 #include <boost/crc.hpp>      // for boost::crc_basic, boost::crc_optimal
 #include <boost/cstdint.hpp>  // for boost::uint16_t
 #include <boost/format.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 #include <algorithm>  // for std::for_each
 #include <cassert>    // for assert
@@ -31,13 +33,16 @@ int main ()
     //assert( crc_ccitt2() == expected );
     std::cout << crc_ccitt2.checksum() << std::endl;
 
-    boost::crc_basic<8>  crc_ccitt3(0x21, 0xFF);
-    crc_ccitt3.process_bytes( data, data_len );
-    //assert( crc_ccitt3.checksum() == expected );
-    std::cout << boost::format("%1x") % static_cast<std::int32_t>(crc_ccitt3.checksum()) << std::endl;
-    std::cout << boost::format("%1X") % static_cast<std::int32_t>(0xAF) << std::endl;
-    std::string crc = (boost::format("%1X% %1x%") % 0xAF).str();
-    std::cout << crc << std::endl;
+    //boost::crc_basic<8>  crc_ccitt3(0x21, 0xFF);
+    //crc_ccitt3.process_bytes( data, data_len );
+    ////assert( crc_ccitt3.checksum() == expected );
+    //std::cout << boost::format("%1x") % static_cast<std::int32_t>(crc_ccitt3.checksum()) << std::endl;
+    //std::cout << boost::format("%1X") % static_cast<std::int32_t>(0xAF) << std::endl;
+    //std::string crc = (boost::format("%1X% %1x%") % 0xAF).str();
+    //std::cout << crc << std::endl;
+
+    auto new_guid = boost::uuids::to_string(boost::uuids::random_generator()());
+    std::cout << "random guid generated: " << new_guid << std::endl;
 
     std::cout << "All tests passed." << std::endl;
     return 0;
