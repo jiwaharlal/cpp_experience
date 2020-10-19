@@ -18,5 +18,7 @@ heaps/build
 2018/RRT/build/*
 **/*_build/*
 **/*_build
+**/build_*
+**/.clangd/*
 **/.vscode/*
 *.exe
