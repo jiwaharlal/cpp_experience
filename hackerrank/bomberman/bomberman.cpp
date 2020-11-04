@@ -6,74 +6,6 @@ vector<string> split_string(string);
 
 // Complete the bomberMan function below.
 
-//void boom_4(std::vector<std::vector<int>>& g, int row, int col)
-//{
-    //g[row][col] = 0;
-    //if (row != 0)
-    //{
-        //g[row - 1][col] = 0;
-    //}
-    //if (col != 0)
-    //{
-        //g[row][col - 1] = 0;
-    //}
-    //if (row + 1 != g.size())
-    //{
-        //g[row + 1][col] = 0;
-    //}
-    //if (col + 1 != g[0].size())
-    //{
-        //g[row][col + 1] = 0;
-    //}
-//}
-
-//void boom_8(std::vector<std::vector<int>>& g, int row, int col)
-//{
-    //boom_4(g, row, col);
-    //if (row != 0 && col != 0)
-    //{
-        //g[row - 1][col - 1] = 0;
-    //}
-    //if (row != 0 && col + 1 != g[0].size())
-    //{
-        //g[row - 1][col + 1] = 0;
-    //}
-    //if (row + 1 != g.size() && col != 0)
-    //{
-        //g[row + 1][col - 1] = 0;
-    //}
-    //if (row + 1 != g.size() && col + 1 != g[0].size())
-    //{
-        //g[row + 1][col + 1] = 0;
-    //}
-//}
-
-//std::vector<std::vector<int>> tick_boom(const std::vector<std::vector<int>>& grid)
-//{
-    //std::vector<std::vector<int>> result(grid.size(), std::vector<int>(grid[0].size(), 0));
-
-    //for (int row = 0; row != grid.size(); ++row)
-    //{
-        //for (int col = 0; col != grid[0].size(); ++col)
-        //{
-            //result[row][col] = std::max(grid[row][col] - 1, 0);
-        //}
-    //}
-
-    //for (int row = 0; row != grid.size(); ++row)
-    //{
-        //for (int col = 0; col != grid[0].size(); ++col)
-        //{
-            //if (grid[row][col] == 1)
-            //{
-                //boom_4(result, row, col);
-            //}
-        //}
-    //}
-
-    //return result;
-//}
-
 void boom_cell_inplace(int& cell)
 {
     if (cell == 1)
@@ -181,6 +113,11 @@ std::vector<std::string> transformToUntimed(const std::vector<std::vector<int>>&
 vector<string> bomberMan(int n, vector<string> grid)
 {
     auto timed_grid = transformToTimed(grid);
+    
+    if (n > 5)
+    {
+        n = (n - 5) % 4 + 5;
+    }
 
     for (int i = 1; i <= n; ++i)
     {
