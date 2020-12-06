@@ -22,3 +22,5 @@ heaps/build
 **/.clangd/*
 **/.vscode/*
 *.exe
+**/.clangd
+**/build_*
