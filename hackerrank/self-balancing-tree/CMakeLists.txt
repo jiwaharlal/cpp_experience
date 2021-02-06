@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.0)
 
-#enable_testing()
+set (CMAKE_CXX_STANDARD 14)
 
+enable_testing()
+
+set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set (CMAKE_CXX_STANDARD 14)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -20,3 +23,20 @@ add_executable(testAvl
     testAvl.cpp
     TAvlSet.hpp
     )
+
+find_package(GTest)
+if (NOT GTest_FOUND)
+    message(warning "GTest not found, tests will not be built")
+    return()
+endif()
+
+add_executable(testAvlSet
+    test_AvlSet.cpp
+    )
+
+target_link_libraries(testAvlSet
+    PRIVATE GTest::GTest
+    PRIVATE GTest::Main
+    )
+
+gtest_discover_tests(testAvlSet)

@@ -10,7 +10,6 @@ struct TAvlNode
     T val;
     NodeType* left;
     NodeType* right;
-    //NodeType* parent;
 
     int ht;
 };
@@ -20,9 +19,12 @@ struct TAvlIterator
 {
 public:
     using value_type = T;
+    using pointer = T*;
     using reference = T&;
     using const_reference = const T&;
     using node = TAvlNode<T>;
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type = std::ptrdiff_t;
 
 public:
     TAvlIterator(const std::vector<node*>& node_seq)
@@ -42,6 +44,13 @@ public:
                 m_node_seq.pop_back();
             }
 
+            if (m_node_seq.empty())
+            {
+                // end reached
+                m_node_seq.push_back(prev); // save root node
+                m_node_seq.push_back(nullptr);
+            }
+
             return *this;
         }
         else
@@ -55,18 +64,46 @@ public:
         }
     }
 
-    //TAvlIterator& operator --()
-    //{
-        //while (!m_node_seq.back()->left)
-        //{
-            //m_node_seq.pop_back();
-        //}
+    TAvlIterator& operator --()
+    {
+        // special case is the end()
+        if (m_node_seq.size() == 2 && m_node_seq.back() == nullptr)
+        {
+            m_node_seq.pop_back();
+            while (true)
+            {
+                auto next = m_node_seq.back()->right;
+                if (next == nullptr)
+                {
+                    return *this;
+                }
+                m_node_seq.push_back(next);
+            }
+        }
 
-        //if (!m_node_seq.empty())
-        //{
-            //m_node_seq.push_back(m_node_seq.back()->left);
-        //}
-    //}
+        if (m_node_seq.back()->left == nullptr)
+        {
+            auto prev = m_node_seq.back();
+            m_node_seq.pop_back();
+
+            while (!m_node_seq.empty() && prev == m_node_seq.back()->left)
+            {
+                prev = m_node_seq.back();
+                m_node_seq.pop_back();
+            }
+
+            return *this;
+        }
+        else
+        {
+            m_node_seq.push_back(m_node_seq.back()->left);
+            while (m_node_seq.back()->right)
+            {
+                m_node_seq.push_back(m_node_seq.back()->right);
+            }
+            return *this;
+        }
+    }
 
     bool operator !=(const TAvlIterator<T>& other) const
     {
@@ -84,6 +121,11 @@ public:
     reference operator *()
     {
         return m_node_seq.back()->val;
+    }
+
+    const node& getNode() const
+    {
+        return m_node_seq.top();
     }
 
 private:
@@ -105,19 +147,49 @@ public:
 
     void insert(const T& value)
     {
-        root = insert(root, value);
+        m_root = insert(m_root, value);
     }
 
     iterator begin()
     {
         std::vector<node*> sequence;
-        for (auto n = root; n; sequence.push_back(n), n = n->left);
+        for (auto n = m_root; n; sequence.push_back(n), n = n->left);
         return iterator(sequence);
     }
 
     iterator end()
     {
-        return iterator({});
+        return iterator({m_root, nullptr});
+    }
+
+    template <typename U>
+    iterator upper_bound(const U& val)
+    {
+        node* cur_node = m_root;
+        std::vector<node*> node_stack;
+        while (cur_node != nullptr)
+        {
+            node_stack.push_back(cur_node);
+            if (val < cur_node->val)
+            {
+                cur_node = cur_node->left;
+            }
+            else if (cur_node->val < val)
+            {
+                cur_node = cur_node->right;
+            }
+            else
+            {
+                return iterator(node_stack);
+            }
+        }
+
+        while (!node_stack.empty() && !(val < node_stack.back()->val))
+        {
+            node_stack.pop_back();
+        }
+
+        return iterator(node_stack);
     }
 
 private:
@@ -137,68 +209,74 @@ private:
             root->right = insert(root->right, val);
         }
 
+        auto new_root = rebalanceIfNeeded(root);
+
+        return new_root;
+    }
+
+    node* rotateLeft(node* top)
+    {
+        auto new_top = top->right;
+        auto new_left = top;
+        new_left->right = new_top->left;
+        new_top->left = new_left;
+        updateHeight(new_left);
+        updateHeight(new_top);
+        return new_top;
+    }
+
+    node* rotateRight(node* top)
+    {
+        auto new_top = top->left;
+        auto new_right = top;
+        new_right->left = new_top->right;
+        new_top->right = new_right;
+        updateHeight(new_right);
+        updateHeight(new_top);
+        return new_top;
+    }
+
+    node* rebalanceIfNeeded(node* root)
+    {
         int right_ht = root->right ? root->right->ht : -1;
         int left_ht = root->left ? root->left->ht : -1;
 
         if (left_ht > right_ht + 1)
         {
+            // right rotation group
             int left_left_ht = root->left->left ? root->left->left->ht : -1;
             int left_right_ht = root->left->right ? root->left->right->ht : -1;
 
             if (left_left_ht >= left_right_ht)
             {
-                auto new_top = root->left;
-                auto new_right = root;
-                new_right->left = new_top->right;
-                new_top->right = root;
-                root = new_top;
+                // right rotation
+                root = rotateRight(root);
             }
             else
             {
-                auto new_top = root->left->right;
-                auto new_right = root;
-                auto new_left = root->left;
-                new_right->left = new_top->right;
-                new_left->right = new_top->left;
-                new_top->left = new_left;
-                new_top->right = new_right;
-
-                root = new_top;
-                updateHeight(root->left);
+                // left-right rotation
+                root->left = rotateLeft(root->left);
+                root = rotateRight(root);
             }
-
-            updateHeight(root->right);
         }
         else if (right_ht > left_ht + 1)
         {
+            //left rotation group
             int right_left_ht = root->right->left ? root->right->left->ht : -1;
             int right_right_ht = root->right->right ? root->right->right->ht : -1;
 
             if (right_right_ht >= right_left_ht)
             {
-                auto new_top = root->right;
-                auto new_left = root;
-                new_left->right = new_top->left;
-                new_top->left = root;
-                root = new_top;
+                // left rotation
+                root = rotateLeft(root);
             }
             else
             {
-                auto new_top = root->right->left;
-                auto new_left = root;
-                auto new_right = root->right;
-                new_left->right = new_top->left;
-                new_right->left = new_top->right;
-                new_top->left = new_left;
-                new_top->right = new_right;
-
-                root = new_top;
-                updateHeight(root->right);
+                // right-left rotation
+                root->right = rotateRight(root->right);
+                root = rotateLeft(root);
             }
-
-            updateHeight(root->left);
         }
-        updateHeight(root);
 
         return root;
     }
@@ -212,5 +290,5 @@ private:
     }
 
 private:
-    node* root = nullptr;
+    node* m_root = nullptr;
 };
