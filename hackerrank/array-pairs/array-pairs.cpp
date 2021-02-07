@@ -87,31 +87,12 @@ std::pair<long, TAvlSet<int>> solveIJ(ArrIter begin, ArrIter end)
         auto& short_set = short_long_set.first;
         auto& long_set = short_long_set.second;
 
-        if (short_set.size() * static_cast<size_t>(std::log2(long_set.size())) > long_set.size())
+        // apply upper_bound search for larger set
+        for (int val1 : short_set)
         {
-            // apply linear pass for larger set
-            int long_acceptable = long_set.size();
-            auto rit = long_set.rbegin();
-            for (int val1 : short_set)
-            {
-                int inclusive_limit = *pivot_it / val1;
-                for (; rit != long_set.rend() && inclusive_limit < *rit; ++rit, --long_acceptable);
-                if (rit == long_set.rend())
-                {
-                    break;
-                }
-                result.first += long_acceptable;
-            }
-        }
-        else
-        {
-            // apply upper_bound search for larger set
-            for (int val1 : short_set)
-            {
-                int inclusive_limit = *pivot_it / val1;
-                auto it = long_set.upper_bound(inclusive_limit);
-                result.first += long_set.count_before(it);
-            }
+            int inclusive_limit = *pivot_it / val1;
+            auto it = long_set.upper_bound(inclusive_limit);
+            result.first += long_set.count_before(it);
         }
 
         result.second.swap(long_set);
