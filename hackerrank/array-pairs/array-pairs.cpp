@@ -42,6 +42,40 @@ long solve(vector<int> arr)
     return result;
 }
 
+using ArrIter = std::vector<int>::iterator;
+
+std::pair<long, std::multiset<int>> solveIJ(ArrIter begin, ArrIter end)
+{
+    std::pair<long, std::multiset<int>> result{0, {}};
+    auto pivot_it = std::max_element(begin, end);
+    // count pairs for pivot
+    result.first += std::count(begin, pivot_it, 1);
+    result.first += std::count(std::next(pivot_it), end, 1);
+
+    std::set<int> left_set(begin, pivot_it);
+    std::set<int> right_set(std::next(pivot_it), end);
+
+    auto& smaller_set = left_set.size() < right_set.size() ? left_set : right_set;
+    auto& larger_set = left_set.size() < right_set.size() ? right_set : left_set;
+
+    if (smaller_set.empty())
+    {
+    }
+    else if (smaller_set.size() * static_cast<size_t>(std::log2(larger_set.size())) > larger_set.size())
+    {
+        // apply linear pass for larger set
+    }
+    else
+    {
+        // apply upper_bound search for larger set
+    }
+}
+
+long solveIJ(vector<int> arr)
+{
+
+}
+
 int main()
 {
     int arr_count;
