@@ -4,11 +4,20 @@
 
 #include <TAvlSet.hpp>
 
-void testLowerBound()
+void testUpperBound()
 {
+    TAvlSet<int> s;
+    for (int i = 0; i < 30; ++i)
+    {
+        s.insert(i);
+    }
+
+    std::cout << s.count_before(s.end()) << std::endl;
+    std::cout << s.count_before(s.upper_bound(21)) << std::endl;
+    std::cout << *s.upper_bound(21) << std::endl;
 }
 
-int main()
+void testInsertions()
 {
     TAvlSet<int> s;
     s.insert(3);
@@ -31,7 +40,10 @@ int main()
         std::cout << i << " ";
     }
     std::cout << std::endl;
+}
 
+void testReverse()
+{
     TAvlSet<int> s3;
     srand(0);
     for (int i = 0; i < 200; ++i)
@@ -47,6 +59,11 @@ int main()
 
     std::copy(rbegin, rend, std::ostream_iterator<int>(std::cout, ", "));
     std::cout << std::endl;
+}
+
+int main()
+{
+    testUpperBound();
 
     return 0;
 }

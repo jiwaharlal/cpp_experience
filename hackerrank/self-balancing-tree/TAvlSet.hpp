@@ -3,6 +3,9 @@
 #include <vector>
 
 template <typename T>
+class TAvlSet;
+
+template <typename T>
 struct TAvlNode
 {
     using NodeType = TAvlNode<T>;
@@ -12,6 +15,7 @@ struct TAvlNode
     NodeType* right;
 
     int ht;
+    int child_count = 0;
 };
 
 template <typename T>
@@ -130,6 +134,8 @@ public:
 
 private:
     std::vector<node*> m_node_seq;
+
+    friend class TAvlSet<T>;
 };
 
 template <typename T>
@@ -152,7 +158,12 @@ public:
 
     iterator begin()
     {
+        // special case for empty set
         std::vector<node*> sequence;
+        if (m_root == nullptr)
+        {
+            sequence.push_back(nullptr);
+        }
         for (auto n = m_root; n; sequence.push_back(n), n = n->left);
         return iterator(sequence);
     }
@@ -163,10 +174,16 @@ public:
     }
 
     template <typename U>
-    iterator upper_bound(const U& val)
+    iterator lower_bound(const U& val)
     {
-        node* cur_node = m_root;
         std::vector<node*> node_stack;
+        if (m_root == nullptr)
+        {
+            node_stack.push_back(m_root);
+            return iterator(node_stack);
+        }
+
+        node* cur_node = m_root;
         while (cur_node != nullptr)
         {
             node_stack.push_back(cur_node);
@@ -180,7 +197,33 @@ public:
             }
             else
             {
-                return iterator(node_stack);
+                break;
+            }
+        }
+        return iterator(node_stack);
+    }
+
+    template <typename U>
+    iterator upper_bound(const U& val)
+    {
+        std::vector<node*> node_stack;
+        if (m_root == nullptr)
+        {
+            node_stack.push_back(m_root);
+            return iterator(node_stack);
+        }
+
+        node* cur_node = m_root;
+        while (cur_node != nullptr)
+        {
+            node_stack.push_back(cur_node);
+            if (val < cur_node->val)
+            {
+                cur_node = cur_node->left;
+            }
+            else
+            {
+                cur_node = cur_node->right;
             }
         }
 
@@ -188,8 +231,47 @@ public:
         {
             node_stack.pop_back();
         }
+        if (node_stack.empty())
+        {
+            node_stack.push_back(nullptr);
+        }
 
         return iterator(node_stack);
+    }
+
+    int count_before(const iterator& it)
+    {
+        auto cur_node_it = it.m_node_seq.begin();
+        auto next_node_it = std::next(cur_node_it);
+
+        auto nodeChildCount = [](const node* n){ return n ? n->child_count + 1 : 0; };
+
+        // special case of end()
+        //if (it.m_node_seq.size() == 2 && it.m_node_seq.back() == nullptr)
+        if (it.m_node_seq.back() == nullptr)
+        {
+            return nodeChildCount(m_root);
+        }
+
+        int total = 0;
+
+        while (true)
+        {
+            const node* cur_node = *cur_node_it;
+            if (next_node_it == it.m_node_seq.end())
+            {
+                return total + nodeChildCount(cur_node->left);
+            }
+            const node* next_node = *next_node_it;
+
+            if (next_node == cur_node->right)
+            {
+                total += nodeChildCount(cur_node->left) + 1;
+            }
+
+            ++cur_node_it;
+            ++next_node_it;
+        }
     }
 
 private:
@@ -197,7 +279,7 @@ private:
     {
         if (root == nullptr)
         {
-            return new node{val, nullptr, nullptr, 0};
+            return new node{val, nullptr, nullptr, 0, 0};
         }
 
         if (val < root->val)
@@ -208,6 +290,9 @@ private:
         {
             root->right = insert(root->right, val);
         }
+
+        ++root->child_count;
+        updateHeight(root);
 
         auto new_root = rebalanceIfNeeded(root);
 
@@ -222,6 +307,10 @@ private:
         new_top->left = new_left;
         updateHeight(new_left);
         updateHeight(new_top);
+
+        updateChildCount(new_left);
+        updateChildCount(new_top);
+
         return new_top;
     }
 
@@ -233,6 +322,10 @@ private:
         new_top->right = new_right;
         updateHeight(new_right);
         updateHeight(new_top);
+
+        updateChildCount(new_right);
+        updateChildCount(new_top);
+
         return new_top;
     }
 
@@ -283,10 +376,18 @@ private:
 
     void updateHeight(node* n)
     {
-        int right_ht = n->right ? n->right->ht : -1;
-        int left_ht = n->left ? n->left->ht : -1;
+        const int right_ht = n->right ? n->right->ht : -1;
+        const int left_ht = n->left ? n->left->ht : -1;
 
         n->ht = std::max(left_ht, right_ht) + 1;
+    }
+
+    void updateChildCount(node* n)
+    {
+        const int left_count = n->left ? n->left->child_count + 1 : 0;
+        const int right_count = n->right ? n->right->child_count + 1 : 0;
+
+        n->child_count = left_count + right_count;
     }
 
 private:

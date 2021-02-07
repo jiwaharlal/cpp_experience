@@ -1,5 +1,7 @@
 #include <bits/stdc++.h>
 
+#include "../self-balancing-tree/TAvlSet.hpp"
+
 using namespace std;
 
 vector<string> split_string(string);
@@ -7,21 +9,41 @@ vector<string> split_string(string);
 // Complete the solve function below.
 long solve(vector<int> arr)
 {
-    long result;
-    int max_elt = *std::max_element(arr.begin(), arr.end());
-    SomeSet prev_values;
+    long result = 0l;
+    int max_elt = 1;
+    TAvlSet<int> prev_values;
 
     for (int i : arr)
     {
-        limit = max_elt / i + 1;
-        result += prev_values.count_less(limit);
+        //int limit = max_elt / i + 1;
+        max_elt = std::max(max_elt, i);
+        const int limit = max_elt / i;
+        const auto limit_it = prev_values.upper_bound(limit);
+
+        // <debug>
+        for (auto it = prev_values.begin(); it != limit_it; ++it)
+        {
+            if (i * *it > max_elt)
+            {
+                std::cout << "pair " << i << ", " << *it << " is used but should not" << std::endl;
+            }
+            //else
+            //{
+                //std::cout << "pair " << i << ", " << *it << " is ok" << std::endl;
+            //}
+        }
+        // </debug>
+
+        int acceptable = prev_values.count_before(limit_it);
+        result += acceptable;
+        prev_values.insert(i);
     }
+
+    return result;
 }
 
 int main()
 {
-    ofstream fout(getenv("OUTPUT_PATH"));
-
     int arr_count;
     cin >> arr_count;
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
@@ -41,9 +63,7 @@ int main()
 
     long result = solve(arr);
 
-    fout << result << "\n";
-
-    fout.close();
+    std::cout << result << "\n";
 
     return 0;
 }

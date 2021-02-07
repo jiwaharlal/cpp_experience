@@ -19,7 +19,7 @@ SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -pg")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(testAvl
+add_executable(mainAvl
     testAvl.cpp
     TAvlSet.hpp
     )
@@ -30,13 +30,13 @@ if (NOT GTest_FOUND)
     return()
 endif()
 
-add_executable(testAvlSet
+add_executable(test_AvlSet
     test_AvlSet.cpp
     )
 
-target_link_libraries(testAvlSet
+target_link_libraries(test_AvlSet
     PRIVATE GTest::GTest
     PRIVATE GTest::Main
     )
 
-gtest_discover_tests(testAvlSet)
+gtest_discover_tests(test_AvlSet)
