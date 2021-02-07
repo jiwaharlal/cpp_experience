@@ -7,7 +7,7 @@ using namespace std;
 vector<string> split_string(string);
 
 // Complete the solve function below.
-long solve(vector<int> arr)
+long solveOld(vector<int> arr)
 {
     long result = 0l;
     int max_elt = 1;
@@ -44,36 +44,87 @@ long solve(vector<int> arr)
 
 using ArrIter = std::vector<int>::iterator;
 
-std::pair<long, std::multiset<int>> solveIJ(ArrIter begin, ArrIter end)
+template<class T, class Compare>
+std::pair<T&, T&> minmax_non_const( T& a, T& b, Compare comp )
 {
-    std::pair<long, std::multiset<int>> result{0, {}};
-    auto pivot_it = std::max_element(begin, end);
-    // count pairs for pivot
-    result.first += std::count(begin, pivot_it, 1);
-    result.first += std::count(std::next(pivot_it), end, 1);
+    return comp(b, a) ? std::pair<T&, T&>(b, a)
+                      : std::pair<T&, T&>(a, b);
+}
 
-    std::set<int> left_set(begin, pivot_it);
-    std::set<int> right_set(std::next(pivot_it), end);
-
-    auto& smaller_set = left_set.size() < right_set.size() ? left_set : right_set;
-    auto& larger_set = left_set.size() < right_set.size() ? right_set : left_set;
-
-    if (smaller_set.empty())
+std::pair<long, TAvlSet<int>> solveIJ(ArrIter begin, ArrIter end)
+{
+    std::pair<long, TAvlSet<int>> result{0, {}};
+    const auto dist = std::distance(begin, end);
+    if (dist == 0)
     {
     }
-    else if (smaller_set.size() * static_cast<size_t>(std::log2(larger_set.size())) > larger_set.size())
+    else if (dist == 1)
     {
-        // apply linear pass for larger set
+        result.second.insert(*begin);
+    }
+    else if (dist == 2)
+    {
+        if (*begin == 1 || *std::next(begin) == 1)
+        {
+            result.first = 1;
+        }
+        result.second.insert(begin, end);
     }
     else
     {
-        // apply upper_bound search for larger set
+        auto pivot_it = std::max_element(begin, end);
+        // count pairs for pivot
+        result.first += std::count(begin, pivot_it, 1) + std::count(std::next(pivot_it), end, 1);
+
+        auto left_result = solveIJ(begin, pivot_it);
+        auto right_result = solveIJ(std::next(pivot_it), end);
+        result.first += left_result.first + right_result.first;
+
+        auto short_long_set = minmax_non_const(
+                left_result.second,
+                right_result.second,
+                [](const auto& lhs, const auto& rhs){ return lhs.size() < rhs.size(); });
+        auto& short_set = short_long_set.first;
+        auto& long_set = short_long_set.second;
+
+        if (short_set.size() * static_cast<size_t>(std::log2(long_set.size())) > long_set.size())
+        {
+            // apply linear pass for larger set
+            int long_acceptable = long_set.size();
+            auto rit = long_set.rbegin();
+            for (int val1 : short_set)
+            {
+                int inclusive_limit = *pivot_it / val1;
+                for (; rit != long_set.rend() && inclusive_limit < *rit; ++rit, --long_acceptable);
+                if (rit == long_set.rend())
+                {
+                    break;
+                }
+                result.first += long_acceptable;
+            }
+        }
+        else
+        {
+            // apply upper_bound search for larger set
+            for (int val1 : short_set)
+            {
+                int inclusive_limit = *pivot_it / val1;
+                auto it = long_set.upper_bound(inclusive_limit);
+                result.first += long_set.count_before(it);
+            }
+        }
+
+        result.second.swap(long_set);
+        result.second.insert(short_set.begin(), short_set.end());
+        result.second.insert(*pivot_it);
     }
+
+    return result;
 }
 
-long solveIJ(vector<int> arr)
+long solve(vector<int> arr)
 {
-
+    return solveIJ(arr.begin(), arr.end()).first;
 }
 
 int main()

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <iterator>
 
 template <typename T>
 class TAvlSet;
@@ -139,6 +140,12 @@ private:
 };
 
 template <typename T>
+std::size_t treeNodeCount(const TAvlNode<T>* root)
+{
+    return root ? root->child_count + 1 : 0;
+}
+
+template <typename T>
 class TAvlSet
 {
 public:
@@ -147,16 +154,35 @@ public:
     using const_reference = const T&;
     using node = TAvlNode<T>;
     using iterator = TAvlIterator<T>;
+    using reverse_iterator = std::reverse_iterator<iterator>;
 
 public:
     //TAvlSet() {}
+    ~TAvlSet()
+    {
+        deleteWithChildren(m_root);
+    }
 
     void insert(const T& value)
     {
         m_root = insert(m_root, value);
     }
 
-    iterator begin()
+    template <typename IterType>
+    void insert(IterType begin, IterType end)
+    {
+        for (; begin != end; ++begin)
+        {
+            insert(*begin);
+        }
+    }
+
+    std::size_t size() const
+    {
+        return treeNodeCount(m_root);
+    }
+
+    iterator begin() const
     {
         // special case for empty set
         std::vector<node*> sequence;
@@ -168,13 +194,23 @@ public:
         return iterator(sequence);
     }
 
-    iterator end()
+    iterator end() const
     {
         return iterator({m_root, nullptr});
     }
 
+    reverse_iterator rbegin() const
+    {
+        return reverse_iterator{end()};
+    }
+
+    reverse_iterator rend() const
+    {
+        return reverse_iterator{begin()};
+    }
+
     template <typename U>
-    iterator lower_bound(const U& val)
+    iterator lower_bound(const U& val) const
     {
         std::vector<node*> node_stack;
         if (m_root == nullptr)
@@ -204,7 +240,7 @@ public:
     }
 
     template <typename U>
-    iterator upper_bound(const U& val)
+    iterator upper_bound(const U& val) const
     {
         std::vector<node*> node_stack;
         if (m_root == nullptr)
@@ -239,18 +275,16 @@ public:
         return iterator(node_stack);
     }
 
-    int count_before(const iterator& it)
+    int count_before(const iterator& it) const
     {
         auto cur_node_it = it.m_node_seq.begin();
         auto next_node_it = std::next(cur_node_it);
-
-        auto nodeChildCount = [](const node* n){ return n ? n->child_count + 1 : 0; };
 
         // special case of end()
         //if (it.m_node_seq.size() == 2 && it.m_node_seq.back() == nullptr)
         if (it.m_node_seq.back() == nullptr)
         {
-            return nodeChildCount(m_root);
+            return treeNodeCount(m_root);
         }
 
         int total = 0;
@@ -260,13 +294,13 @@ public:
             const node* cur_node = *cur_node_it;
             if (next_node_it == it.m_node_seq.end())
             {
-                return total + nodeChildCount(cur_node->left);
+                return total + treeNodeCount(cur_node->left);
             }
             const node* next_node = *next_node_it;
 
             if (next_node == cur_node->right)
             {
-                total += nodeChildCount(cur_node->left) + 1;
+                total += treeNodeCount(cur_node->left) + 1;
             }
 
             ++cur_node_it;
@@ -274,7 +308,24 @@ public:
         }
     }
 
+    void swap(TAvlSet<T>& other)
+    {
+        std::swap(m_root, other.m_root);
+    }
+
 private:
+    void deleteWithChildren(node* n)
+    {
+        if (n == nullptr)
+        {
+            return;
+        }
+
+        deleteWithChildren(n->left);
+        deleteWithChildren(n->right);
+        delete n;
+    }
+
     node * insert(node * root, const_reference val)
     {
         if (root == nullptr)
