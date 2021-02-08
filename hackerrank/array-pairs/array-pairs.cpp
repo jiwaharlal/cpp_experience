@@ -42,7 +42,30 @@ long solveOld(vector<int> arr)
     return result;
 }
 
-using ArrIter = std::vector<int>::iterator;
+template <typename Iter>
+Iter findPivotFromCenter(Iter begin, Iter end)
+{
+    auto mid = begin + (end - begin) / 2;
+
+    auto right_max_it = std::max_element(mid, end);
+    auto left_max_it = std::max_element(begin, mid, std::less_equal<int>());
+
+    if (*left_max_it < *right_max_it)
+    {
+        return right_max_it;
+    }
+    else if (*right_max_it < *left_max_it)
+    {
+        return left_max_it;
+    }
+
+    if (std::distance(left_max_it, mid) < std::distance(mid, right_max_it))
+    {
+        return left_max_it;
+    }
+
+    return right_max_it;
+}
 
 template<class T, class Compare>
 std::pair<T&, T&> minmax_non_const( T& a, T& b, Compare comp )
@@ -50,6 +73,8 @@ std::pair<T&, T&> minmax_non_const( T& a, T& b, Compare comp )
     return comp(b, a) ? std::pair<T&, T&>(b, a)
                       : std::pair<T&, T&>(a, b);
 }
+
+using ArrIter = std::vector<int>::iterator;
 
 std::pair<long, TAvlSet<int>> solveIJ(ArrIter begin, ArrIter end)
 {
@@ -72,7 +97,7 @@ std::pair<long, TAvlSet<int>> solveIJ(ArrIter begin, ArrIter end)
     }
     else
     {
-        auto pivot_it = std::max_element(begin, end);
+        auto pivot_it = findPivotFromCenter(begin, end);
         // count pairs for pivot
         result.first += std::count(begin, pivot_it, 1) + std::count(std::next(pivot_it), end, 1);
 
