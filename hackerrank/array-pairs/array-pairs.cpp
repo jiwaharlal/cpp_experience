@@ -128,9 +128,64 @@ std::pair<long, TAvlSet<int>> solveIJ(ArrIter begin, ArrIter end)
     return result;
 }
 
+std::pair<long, std::vector<int>> solveIJVector(ArrIter begin, ArrIter end)
+{
+    std::pair<long, std::vector<int>> result{0, {}};
+    const auto dist = std::distance(begin, end);
+    if (dist == 0)
+    {
+    }
+    else if (dist == 1)
+    {
+        result.second.push_back(*begin);
+    }
+    else if (dist == 2)
+    {
+        if (*begin == 1 || *std::next(begin) == 1)
+        {
+            result.first = 1;
+        }
+        result.second.resize(2, 0);
+        std::tie(result.second[0], result.second[1]) = std::minmax(*begin, *std::next(begin));
+    }
+    else
+    {
+        auto pivot_it = findPivotFromCenter(begin, end);
+        // count pairs for pivot
+        result.first += std::count(begin, pivot_it, 1) + std::count(std::next(pivot_it), end, 1);
+
+        auto left_result = solveIJVector(begin, pivot_it);
+        auto right_result = solveIJVector(std::next(pivot_it), end);
+        result.first += left_result.first + right_result.first;
+
+        auto short_long_set = minmax_non_const(
+                left_result.second,
+                right_result.second,
+                [](const auto& lhs, const auto& rhs){ return lhs.size() < rhs.size(); });
+        auto& short_set = short_long_set.first;
+        auto& long_set = short_long_set.second;
+
+        // apply upper_bound search for larger set
+        for (int val1 : short_set)
+        {
+            int inclusive_limit = *pivot_it / val1;
+            const auto it = std::upper_bound(long_set.begin(), long_set.end(), inclusive_limit);
+            result.first += std::distance(long_set.begin(), it);
+        }
+
+        result.second.reserve(long_set.size() + short_set.size() + 1);
+        std::merge(long_set.begin(), long_set.end(),
+                short_set.begin(), short_set.end(),
+                std::back_inserter(result.second));
+        result.second.push_back(*pivot_it);
+    }
+
+    return result;
+}
+
 long solve(vector<int> arr)
 {
-    return solveIJ(arr.begin(), arr.end()).first;
+    return solveIJVector(arr.begin(), arr.end()).first;
 }
 
 int main()
