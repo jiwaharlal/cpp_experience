@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <list>
 #include <sstream>
 #include <vector>
 
@@ -18,25 +19,27 @@ enum class TriBool
     Unclear
 };
 
-std::pair<string, string> morganAndString(StrIter a_it, StrIter a_end, StrIter b_it, StrIter b_end)
+std::pair<std::list<char>, std::list<char>> morganAndString(StrIter a_it, StrIter a_end, StrIter b_it, StrIter b_end)
 {
-    std::stringstream s;
-    std::stringstream source;
+    std::pair<std::list<char>, std::list<char>> result;
+
+    auto& s = result.first;
+    auto& source = result.second;
 
     for (; a_it != a_end && b_it != b_end; )
     {
         if (*a_it < *b_it)
         {
-            s << *a_it;
-            source << 'a';
+            s.push_back(*a_it);
+            source.push_back('a');
             ++a_it;
             continue;
         }
 
         if (*b_it < *a_it)
         {
-            s << *b_it;
-            source << 'b';
+            s.push_back(*b_it);
+            source.push_back('b');
             ++b_it;
             continue;
         }
@@ -90,52 +93,59 @@ std::pair<string, string> morganAndString(StrIter a_it, StrIter a_end, StrIter b
 
         if (is_a_first == TriBool::True)
         {
-            std::copy(a_it, first_non_equal_in_a, std::ostream_iterator<char>(s));
-            std::fill_n(std::ostream_iterator<char>(source), std::distance(a_it, first_non_equal_in_a), 'a');
+            std::copy(a_it, first_non_equal_in_a, std::back_inserter(s));
+            std::fill_n(std::back_inserter(source), std::distance(a_it, first_non_equal_in_a), 'a');
             a_it = first_non_equal_in_a;
         }
         else if (is_a_first == TriBool::False)
         {
-            std::copy(b_it, first_non_equal_in_b, std::ostream_iterator<char>(s));
-            std::fill_n(std::ostream_iterator<char>(source), std::distance(b_it, first_non_equal_in_b), 'b');
+            std::copy(b_it, first_non_equal_in_b, std::back_inserter(s));
+            std::fill_n(std::back_inserter(source), std::distance(b_it, first_non_equal_in_b), 'b');
             b_it = first_non_equal_in_b;
         }
         else // unclear
         {
-            const auto option_a = morganAndString(first_non_equal_in_a, a_end, b_it, b_end);
-            const auto option_b = morganAndString(a_it, a_end, first_non_equal_in_b, b_end);
+            auto option_a = morganAndString(first_non_equal_in_a, a_end, b_it, b_end);
+            auto option_b = morganAndString(a_it, a_end, first_non_equal_in_b, b_end);
 
             const auto mm = std::mismatch(option_a.first.begin(), option_a.first.end(), option_b.first.begin());
 
-            const auto& src = [&]() -> const std::pair<std::string, std::string>&
+            auto& src = [&]() -> std::pair<std::list<char>, std::list<char>>&
             {
                 if (mm.first != option_a.first.end() && *mm.first < *mm.second)
                 {
-                    std::fill_n(std::ostream_iterator<char>(source), std::distance(b_it, first_non_equal_in_b), 'a');
+                    std::fill_n(std::back_inserter(source), std::distance(b_it, first_non_equal_in_b), 'a');
                     return option_a;
                 }
-                std::fill_n(std::ostream_iterator<char>(source), std::distance(b_it, first_non_equal_in_b), 'b');
+                std::fill_n(std::back_inserter(source), std::distance(b_it, first_non_equal_in_b), 'b');
                 return option_b;
             }();
-            std::copy(a_it, first_non_equal_in_a, std::ostream_iterator<char>(s));
-            s << src.first;
-            source << src.second;
+            std::copy(a_it, first_non_equal_in_a, std::back_inserter(s));
+            s.splice(s.end(), std::move(src.first));
+            source.splice(source.end(), std::move(src.second));
+            //s << src.first;
+            //source << src.second;
 
-            return std::make_pair(s.str(), source.str());
+            //return std::make_pair(s.str(), source.str());
+            a_it = a_end;
+            b_it = b_end;
         }
     }
 
-    std::copy(b_it, b_end, std::ostream_iterator<char>(s));
-    std::fill_n(std::ostream_iterator<char>(source), std::distance(b_it, b_end), 'b');
-    std::copy(a_it, a_end, std::ostream_iterator<char>(s));
-    std::fill_n(std::ostream_iterator<char>(source), std::distance(a_it, a_end), 'a');
+    std::copy(b_it, b_end, std::back_inserter(s));
+    std::fill_n(std::back_inserter(source), std::distance(b_it, b_end), 'b');
+    std::copy(a_it, a_end, std::back_inserter(s));
+    std::fill_n(std::back_inserter(source), std::distance(a_it, a_end), 'a');
 
-    return std::make_pair(s.str(), source.str());
+    //return std::make_pair(s.str(), source.str());
+    return result;
 }
 
 std::pair<string, string> morganAndString(const std::string& a, const std::string& b)
 {
-    return morganAndString(a.begin(), a.end(), b.begin(), b.end());
+    auto list_pair = morganAndString(a.begin(), a.end(), b.begin(), b.end());
+    return std::make_pair(std::string(list_pair.first.begin(), list_pair.first.end()),
+            std::string(list_pair.second.begin(), list_pair.second.end()));
 }
 
 
