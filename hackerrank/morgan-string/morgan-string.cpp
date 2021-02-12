@@ -3,6 +3,7 @@
 #include <iostream>
 #include <iterator>
 #include <list>
+#include <map>
 #include <sstream>
 #include <vector>
 
@@ -18,6 +19,8 @@ enum class TriBool
     False,
     Unclear
 };
+
+std::map<std::pair<int, int>, bool> cached_comparisons;
 
 std::pair<std::list<char>, std::list<char>> morganAndString(StrIter a_it, StrIter a_end, StrIter b_it, StrIter b_end)
 {
@@ -91,6 +94,24 @@ std::pair<std::list<char>, std::list<char>> morganAndString(StrIter a_it, StrIte
             return TriBool::Unclear;
         }();
 
+        auto cache_key = std::make_pair(std::distance(a_it, a_end), std::distance(b_it, b_end));
+
+        if (is_a_first == TriBool::Unclear)
+        {
+            auto comparison_it = cached_comparisons.find(cache_key);
+            if (comparison_it != cached_comparisons.end())
+            {
+                if (comparison_it->second)
+                {
+                    is_a_first = TriBool::True;
+                }
+                else
+                {
+                    is_a_first = TriBool::False;
+                }
+            }
+        }
+
         if (is_a_first == TriBool::True)
         {
             std::copy(a_it, first_non_equal_in_a, std::back_inserter(s));
@@ -116,17 +137,16 @@ std::pair<std::list<char>, std::list<char>> morganAndString(StrIter a_it, StrIte
                 {
                     std::fill_n(std::back_inserter(source), std::distance(b_it, first_non_equal_in_b), 'a');
                     return option_a;
+                    cached_comparisons.emplace(cache_key, true);
                 }
                 std::fill_n(std::back_inserter(source), std::distance(b_it, first_non_equal_in_b), 'b');
+                cached_comparisons.emplace(cache_key, false);
                 return option_b;
             }();
             std::copy(a_it, first_non_equal_in_a, std::back_inserter(s));
             s.splice(s.end(), std::move(src.first));
             source.splice(source.end(), std::move(src.second));
-            //s << src.first;
-            //source << src.second;
 
-            //return std::make_pair(s.str(), source.str());
             a_it = a_end;
             b_it = b_end;
         }
