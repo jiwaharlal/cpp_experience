@@ -49,8 +49,8 @@ struct A {
     ~A() { cout << "A::~A()\n"; }
     A(const A&) { cout << "A::A(const A&)\n"; }
     A& operator =(const A&) { cout << "operator =(const A&)\n"; return *this; }
-    A(A&&) { cout << "A::A(A&&)\n"; }
-    A& operator =(A&&) { cout << "operator =(A&&)\n"; return *this; }
+    A(A&&) noexcept { cout << "A::A(A&&)\n"; }
+    A& operator =(A&&) noexcept { cout << "operator =(A&&)\n"; return *this; }
 };
 
 A getA()
@@ -72,11 +72,11 @@ int main()
     {
         std::vector<A> as;
 
-        as.reserve(5);
+        //as.reserve(5);
         for (int i = 0; i != 5; ++i)
         {
-            //as.push_back(A());
-            as.emplace_back();
+            as.push_back(A());
+            //as.emplace_back();
         }
         cout << "generation done\n";
 

@@ -55,35 +55,31 @@ int main(int, char**)
    std::cout << std::endl;
    //std::cout << std::endl;
 
-   //boost::shared_ptr<B> pb(new B());
-   //boost::shared_ptr<A> pa = pb;
+   boost::shared_ptr<B> pb(new B());
+   boost::shared_ptr<A> pa = pb;
 
-   //typedef std::list<int> tIntList;
-   //tIntList ints;
-   //boost::copy(boost::irange(0, 10), std::back_inserter(ints));
-   //for (tIntList::iterator it = ints.begin(); it != ints.end(); ++it)
-   //{
-      //if (*it % 2 == 0)
-      //{
-         ////--it;
-         ////ints.erase(boost::next(it));
-         //ints.erase(it--);
-      //}
-   //}
-   //boost::copy(ints, std::ostream_iterator<int>(std::cout, ", "));
-   //std::cout << std::endl;
+   typedef std::list<int> tIntList;
+   tIntList ints;
+   boost::copy(boost::irange(0, 10), std::back_inserter(ints));
+   for (tIntList::iterator it = ints.begin(); it != ints.end(); ++it)
+   {
+      if (*it % 2 == 0)
+      {
+         //--it;
+         //ints.erase(boost::next(it));
+         ints.erase(it--);
+      }
+   }
+   boost::copy(ints, std::ostream_iterator<int>(std::cout, ", "));
+   std::cout << std::endl;
 
-   //std::vector<int32_t> non_unique{1, 2, 2, 3, 4, 4, 4, 5, 6, 7, 7, 7};
-   //auto unique_range = boost::unique(non_unique);
+   std::vector<int32_t> non_unique{1, 2, 2, 3, 4, 4, 4, 5, 6, 7, 7, 7};
+   auto unique_range = boost::unique(non_unique);
    //auto adjacent_range = boost::adjacent_find(non_unique);
 
-   //std::cout << "Adjacent range:\n";
-   //boost::copy(adjacent_range, std::ostream_iterator<int32_t>(std::cout, ", "));
-   //std::cout << std::endl;
-
-   //std::cout << "Unique range:\n";
-   //boost::copy(unique_range, std::ostream_iterator<int32_t>(std::cout, ", "));
-   //std::cout << std::endl;
+   std::cout << "Adjacent range:\n";
+   boost::copy(unique_range, std::ostream_iterator<int32_t>(std::cout, ", "));
+   std::cout << std::endl;
 
    return 0;
 }
